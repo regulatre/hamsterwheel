@@ -28,6 +28,14 @@ adc = Adafruit_ADS1x15.ADS1115()
 #  -  16 = +/-0.256V
 # See table 3 in the ADS1015/ADS1115 datasheet for more info on gain.
 GAIN = 1
+# Min change in ADC reading vs average for us to take notice.
+MIN_CHANGE=4
+
+# This function gets fired every time a "revolution" is detected - one complete turn around, or one pass of the hall-effect sensor.
+def revolutionEvent(idx):
+    print ("TODO: One Revolution just occurred! IDX=" + str(idx))
+    pass
+    
 
 print('Reading ADS1x15 values, press Ctrl-C to quit...')
 # Print nice channel column headers.
@@ -35,13 +43,13 @@ print('| {0:>6} | {1:>6} | {2:>6} | {3:>6} |'.format(*range(4)))
 print('-' * 37)
 # Main loop.
 valuesAvg=[0.0,0.0,0.0,0.0,0.0]
-direction=0
-# Min change in ADC reading vs average for us to take notice.
-MIN_CHANGE=4
+direction=[0,0,0,0]
 while True:
     # Read all the ADC channel values in a list.
     values = [0]*4
-    for i in range(4):
+    # for i in range(4):
+    # Just loop through the analog pins that have hall-effect speed-ometer sensors attached.
+    for i in [2,3]:
         # Read the specified ADC channel using the previously set gain value.
         values[i] = adc.read_adc(i, gain=GAIN)
         valuesAvg[i] = (valuesAvg[i] + values[i]) / 2
@@ -50,26 +58,19 @@ while True:
         # set of allowed data rate values, see datasheet Table 9 config register
         # DR bit values.
         #values[i] = adc.read_adc(i, gain=GAIN, data_rate=128)
-        # Each value will be a 12 or 16 bit signed integer value depending on the
+        # Each value will be a 12 or 16 bit signed integer value depending on the        
         # ADC (ADS1015 = 12-bit, ADS1115 = 16-bit).
-    # Print the ADC values.
+        amtChange = values[i] - valuesAvg[i]
+
+        if (i==3 or i==2) and amtChange > MIN_CHANGE and direction[i] != 1:
+            print ("[A" + i + "]: " + str(amtChange) + " from " + str(values[i]) + " to " + str(valuesAvg[i]))
+            revolutionEvent(i)
+            # IMPORTANT: Upon detecting a pass/revolution we start a mandatory "delay" before checking anything again. This effectivelu de-bounces the readings. 
+            time.sleep(0.2)
+        
+        if amtChange > MIN_CHANGE:
+            direction[i]=1
+        if amtChange < 0:
+            direction[i]=-1
+
     ANALOG_INDEX=3
-    amtChange = values[ANALOG_INDEX] - valuesAvg[ANALOG_INDEX]
-
-
-    # print('| {0:>6} | {1:>6} | {2:>6} | {3:>6} |'.format(*values))
-    if amtChange > MIN_CHANGE and direction != 1:
-      print (str(amtChange) + " from " + str(values[ANALOG_INDEX]) + " to " + str(valuesAvg[ANALOG_INDEX]))
-      time.sleep(0.2)
-
-    # update/calculate direction after using the value of direction
-    if amtChange > MIN_CHANGE:
-        direction=1
-    if amtChange < 0:
-        direction=-1
-    #if amtChange == 0:
-    #    direction = 0
-
-    # print('| {0:>6} | {1:>6} | {2:>6} | {3:>6} |'.format(*values))
-    # Pause for half a second.
-    # time.sleep(0.2)
