@@ -7,6 +7,10 @@ import time
 # Import the ADS1x15 module.
 import Adafruit_ADS1x15
 
+import bhstats
+import json
+
+stats = [bhstats.BhStats(),bhstats.BhStats(),bhstats.BhStats(),bhstats.BhStats()]
 
 # Create an ADS1115 ADC (16-bit) instance.
 adc = Adafruit_ADS1x15.ADS1115()
@@ -30,25 +34,69 @@ adc = Adafruit_ADS1x15.ADS1115()
 GAIN = 1
 # Min change in ADC reading vs average for us to take notice.
 MIN_CHANGE=4
+# true fact
+INCHES_PER_MILE=63360
+WHEEL_CIRCUMFRANCE=[0,0,19.5,21]
+# Define a maximum valid RPM reading, over which we classify the reading as invalid (sometimes events are sensed twice)
+MAX_VALID_RPM=200
 
+def getEpochMillis():
+    # time.time() returns a float, expressed in terms of seconds, but multiplying by 1000 gives us a pretty accurate milliseconds.
+    return int(round(time.time() * 1000))
+
+def logStdErr (yourMessage):
+    # python2 syntax
+    print >> sys.stderr, yourMessage
+    # Python3: print yourMessage, file=sys.stderr
+
+def getRPMFromOneRoundTime(oneRoundTimeMillis):
+  rpm = (1000 * 60) / oneRoundTimeMillis
+  rpm = round(rpm,3)
+  return rpm
+
+def getMPHFromRPM(rpm,inchesPerRevolution):
+  mph = (rpm * inchesPerRevolution * 60) / INCHES_PER_MILE
+  mph = round(mph,3)
+  return mph
+
+
+# Initialize an array that we'll use to store last revolution times for each analog input.
+LAST_REVOLUTION_TIME = [getEpochMillis(), getEpochMillis(), getEpochMillis(), getEpochMillis()]
 # This function gets fired every time a "revolution" is detected - one complete turn around, or one pass of the hall-effect sensor.
-def revolutionEvent(idx):
-    print ("TODO: One Revolution just occurred! IDX=" + str(idx))
-    pass
+def revolutionEvent(idx,amtChange):
+    timeSinceLastRevolution=getEpochMillis()-LAST_REVOLUTION_TIME[idx];
+    LAST_REVOLUTION_TIME[idx] = getEpochMillis()
     
+    rpm = getRPMFromOneRoundTime(timeSinceLastRevolution)
+    mph = getMPHFromRPM(rpm,WHEEL_CIRCUMFRANCE[idx])
 
-print('Reading ADS1x15 values, press Ctrl-C to quit...')
-# Print nice channel column headers.
-print('| {0:>6} | {1:>6} | {2:>6} | {3:>6} |'.format(*range(4)))
-print('-' * 37)
-# Main loop.
+    # Make sure each stats array contains an element that reflects the analog index to which it corresponds.
+    stats[idx].setStat("analogIndex",idx)
+
+    if rpm > MAX_VALID_RPM:
+        return
+
+    # Don't count this as a revolution unless above sanity checks and debouncing logic pass. 
+    stats[idx].incrementStat("totalRevolutions")
+
+    # Don't calculate speed if wheel has been idle. But it still counts as a revolution (which we took care of above). 
+    if timeSinceLastRevolution > 5000:
+        return
+
+    print ("[" + str(idx) + "] TODO: Calibrate wheel circumfrance array. STATS=" + json.dumps(stats[idx].getStats()))
+    
+    # All sanity checks passed. This is a legitimate revolution.
+    stats[idx].setStat("lastRevolutionMillis",timeSinceLastRevolution)
+    stats[idx].setStat("rpm",rpm)
+    stats[idx].setStat("mph",mph)
+    stats[idx].averageStat("AvgAmtChange",amtChange)
+
 valuesAvg=[0.0,0.0,0.0,0.0,0.0]
 direction=[0,0,0,0]
 while True:
     # Read all the ADC channel values in a list.
     values = [0]*4
-    # for i in range(4):
-    # Just loop through the analog pins that have hall-effect speed-ometer sensors attached.
+    # loop through the analog pins that have hall-effect speed-ometer sensors attached.
     for i in [2,3]:
         # Read the specified ADC channel using the previously set gain value.
         values[i] = adc.read_adc(i, gain=GAIN)
@@ -63,10 +111,9 @@ while True:
         amtChange = values[i] - valuesAvg[i]
 
         if (i==3 or i==2) and amtChange > MIN_CHANGE and direction[i] != 1:
-            print ("[A" + i + "]: " + str(amtChange) + " from " + str(values[i]) + " to " + str(valuesAvg[i]))
-            revolutionEvent(i)
-            # IMPORTANT: Upon detecting a pass/revolution we start a mandatory "delay" before checking anything again. This effectivelu de-bounces the readings. 
-            time.sleep(0.2)
+            # print ("[A" + str(i) + "]: " + str(amtChange) + " from " + str(values[i]) + " to " + str(valuesAvg[i]))
+            revolutionEvent(i,amtChange)
+            # NOTE: We were sleeping for 0.2 here when it was just one input. With multiple inputs we need to do an elapsed time check instead of a sleep. That way inputs don't interfere with eachother.
         
         if amtChange > MIN_CHANGE:
             direction[i]=1
