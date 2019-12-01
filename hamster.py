@@ -10,6 +10,8 @@ import Adafruit_ADS1x15
 import bhstats
 import json
 import LightMQ
+import requests
+
 
 stats = [bhstats.BhStats(),bhstats.BhStats(),bhstats.BhStats(),bhstats.BhStats()]
 messageQueue = LightMQ.LightMQ({"maxqueuelength": 999999, "persistencepath": "./lightMQ_hamster"})
@@ -26,7 +28,7 @@ adc = Adafruit_ADS1x15.ADS1115()
 #  -   8 = +/-0.512V
 #  -  16 = +/-0.256V
 # See table 3 in the ADS1015/ADS1115 datasheet for more info on gain.
-GAIN = 1
+GAIN = 16
 # Min change in ADC reading vs average for us to take notice.
 MIN_CHANGE=4
 # true fact
@@ -78,6 +80,8 @@ def resetWheelStats(idx):
   stats[idx].setStat("lastResetTime",getEpochMillis())
   
   
+# Queue readings from all analog wheel speed input sensors, then reset them. Run this function during times when the wheel has stopped for best results.
+# ALSO: send those queued readings to the log collector.
 def queueStatsReading(idx):
   # For each stats index
   # If the stats index is in use and has useful data
@@ -101,7 +105,33 @@ def queueStatsReading(idx):
   statsCopy["timestamp"] = getEpochMillis()
   messageQueue.put(statsCopy)
   resetWheelStats(idx)
+  dequeueReadings()
+  dequeueReadings()
+  # finished queueing a readings object.
+
+def dequeueReadings():
+
+  # If no readings, do nothing.
+  if messageQueue.qsize() < 1:
+    return
+
+  # Try sending this
   print ("Queue peek: " + json.dumps(messageQueue.peek()))
+  try:
+    httpresp = requests.post("http://150.10.50.20:59655/hamsterwheel", json=messageQueue.peek())
+  except Exception as e: 
+    print ("EXCEPTION while posting data to log collector. e=" + str(e))
+    return
+
+  if httpresp.status_code != 200:
+    print ("ERROR sending reading, status code=" + str(httpresp.status_code) + " body=" + httpresp.text)
+    return
+
+  print ("Successfully sent one reading to log collecrtor. DE-queueing one reading!")
+  messageQueue.pop()
+
+  # TODO: Catch-up logic, in case we need to "catch up" - send multiple readings per interval.
+  
 
 
 # Initialize an array that we'll use to store last revolution times for each analog input.
@@ -178,7 +208,9 @@ while True:
     # This block started as a periodic metrics print, but evolved into a "stillness" detection block. If wheel has been idle, then it sets speed/rpm to zero. 
     if runtimeElapsedSeconds % 2 == 0 and runtimeElapsedSeconds > 0 and getEpochMillis() - lastRuntimeStatsPrinted > 1000:
       loopsPerSecond = loops / runtimeElapsedSeconds
-      # print ("Runtime Stats: " + str(loops) + " in " + str(runtimeElapsedSeconds) + " seconds = " + str(loopsPerSecond) + " loops per second")
+      #print ("Runtime Stats: " + str(loops) + " in " + str(runtimeElapsedSeconds) + " seconds = " + str(loopsPerSecond) + " loops per second")
+      #print ("avg2=" + str(valuesAvg[2]))
+      #print ("avg3=" + str(valuesAvg[3]))
       lastRuntimeStatsPrinted = getEpochMillis()
       checkWheelStillness()
 
