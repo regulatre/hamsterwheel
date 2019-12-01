@@ -9,18 +9,13 @@ import Adafruit_ADS1x15
 
 import bhstats
 import json
+import LightMQ
 
 stats = [bhstats.BhStats(),bhstats.BhStats(),bhstats.BhStats(),bhstats.BhStats()]
+messageQueue = LightMQ.LightMQ({"maxqueuelength": 999999, "persistencepath": "./lightMQ_hamster"})
 
 # Create an ADS1115 ADC (16-bit) instance.
 adc = Adafruit_ADS1x15.ADS1115()
-
-# Or create an ADS1015 ADC (12-bit) instance.
-#adc = Adafruit_ADS1x15.ADS1015()
-
-# Note you can change the I2C address from its default (0x48), and/or the I2C
-# bus by passing in these optional parameters:
-#adc = Adafruit_ADS1x15.ADS1015(address=0x49, busnum=1)
 
 # Choose a gain of 1 for reading voltages from 0 to 4.09V.
 # Or pick a different gain to change the range of voltages that are read:
@@ -39,6 +34,8 @@ INCHES_PER_MILE=63360
 WHEEL_CIRCUMFRANCE=[0,0,19.5,21]
 # Define a maximum valid RPM reading, over which we classify the reading as invalid (sometimes events are sensed twice)
 MAX_VALID_RPM=200
+# If no revolutions are detected for this period of milliseconds or more, then RPM/MPH will be set to zero. 
+WHEEL_STILLNESS_THRESHOLD = 2000
 
 def getEpochMillis():
     # time.time() returns a float, expressed in terms of seconds, but multiplying by 1000 gives us a pretty accurate milliseconds.
@@ -59,6 +56,53 @@ def getMPHFromRPM(rpm,inchesPerRevolution):
   mph = round(mph,3)
   return mph
 
+# Creates a new object with a copy of all fields in the fromObj EXCEPT fields with names specified in the exceptionList.
+def objCopyExcept(fromObj,exceptionList):
+  newObj = {}
+  
+  for thisKey in fromObj:
+    if thisKey in exceptionList: 
+      continue
+    newObj[thisKey] = fromObj[thisKey]
+
+  return newObj
+  
+# After making a copy of the stats and queueing the readings for shipment to the log collector, we need to reset things like distance. 
+def resetWheelStats(idx):
+  stats[idx].setStat("totalRevolutions",0)
+  stats[idx].setStat("totalInches",0)
+  # Even though the following two metrics are already reset by this time, through other means (stillness threshold was met), we'll reset them anyways. 
+  stats[idx].setStat("rpm",0)
+  stats[idx].setStat("mph",0)
+ 
+  stats[idx].setStat("lastResetTime",getEpochMillis())
+  
+  
+def queueStatsReading(idx):
+  # For each stats index
+  # If the stats index is in use and has useful data
+  # Then create a copy of it
+  # Then add things like timestamp, runtime? rss? 
+  # Then queue the reading for transmission to the server
+  # Then try dequeueing and sending the reading to the server. IF successful pop the reading off the queue. 
+  # LightMQ verbs: put, peek, pop - variable name messageQueue
+  
+  # Add an interval metric that reflects the period of time over which the metric covers.
+
+  statsPeriod = 0
+  if "lastResetTime" in stats[idx].getStats():
+    statsPeriod = getEpochMillis() - stats[idx].getStat("lastResetTime")  
+  else:
+    statsPeriod = getEpochMillis() - stats[idx].getStat("startupTime")
+  
+  stats[idx].setStat("statsPeriod",statsPeriod)
+
+  statsCopy = objCopyExcept(stats[idx].getStats(),["lastRevolutionTime","lastResetTime","startupTime"])
+  statsCopy["timestamp"] = getEpochMillis()
+  messageQueue.put(statsCopy)
+  resetWheelStats(idx)
+  print ("Queue peek: " + json.dumps(messageQueue.peek()))
+
 
 # Initialize an array that we'll use to store last revolution times for each analog input.
 LAST_REVOLUTION_TIME = [getEpochMillis(), getEpochMillis(), getEpochMillis(), getEpochMillis()]
@@ -78,9 +122,12 @@ def revolutionEvent(idx,amtChange):
 
     # Don't count this as a revolution unless above sanity checks and debouncing logic pass. 
     stats[idx].incrementStat("totalRevolutions")
+    stats[idx].setStat("totalInches",stats[idx].getStat("totalRevolutions") * WHEEL_CIRCUMFRANCE[idx])
+    # The last revolution time metric is used by the loop to clear rpm&MPH if no movement has been detected in N seconds.
+    stats[idx].setStat("lastRevolutionTime",getEpochMillis())
 
     # Don't calculate speed if wheel has been idle. But it still counts as a revolution (which we took care of above). 
-    if timeSinceLastRevolution > 5000:
+    if timeSinceLastRevolution > WHEEL_STILLNESS_THRESHOLD:
         return
 
     print ("[" + str(idx) + "] TODO: Calibrate wheel circumfrance array. STATS=" + json.dumps(stats[idx].getStats()))
@@ -91,9 +138,50 @@ def revolutionEvent(idx,amtChange):
     stats[idx].setStat("mph",mph)
     stats[idx].averageStat("AvgAmtChange",amtChange)
 
+# If the wheel is still, then we'll set RPM & MPH to zeros. 
+def wheelIsStill(idx):
+  # print ("Wheel " + str(idx) + " is idle.")
+
+  # If RPM went from >0 to 0 then this counts as a "stop" - wheel was moving, then stopped. Count the number of times this happens per wheel.
+  if "rpm" in stats[idx].getStats():
+    if stats[idx].getStat("rpm") > 0:
+      stats[idx].incrementStat("stops")
+      queueStatsReading(idx)
+
+  stats[idx].setStat("rpm",0)
+  stats[idx].setStat("mph",0)
+
+# Check all wheels for stillness, taking action to update rate gauges on any wheels that are still.
+def checkWheelStillness():
+  for i in [2,3]:
+    if "lastRevolutionTime" in stats[i].getStats():
+      timeSinceLastRevolution = getEpochMillis() - stats[i].getStat("lastRevolutionTime")
+      if timeSinceLastRevolution > WHEEL_STILLNESS_THRESHOLD:
+        wheelIsStill(i)
+    else:
+      # last revolution time has not yet been set. Set values to zero since that indicates it's still.
+      wheelIsStill(i)
+
+
+
+
 valuesAvg=[0.0,0.0,0.0,0.0,0.0]
 direction=[0,0,0,0]
+startTime = getEpochMillis()
+lastRuntimeStatsPrinted = startTime
+loops=0
+stats[2].setStat("startupTime",getEpochMillis())
+stats[3].setStat("startupTime",getEpochMillis())
 while True:
+    loops = loops + 1
+    runtimeElapsedSeconds = int((getEpochMillis() - startTime)/1000)
+    # This block started as a periodic metrics print, but evolved into a "stillness" detection block. If wheel has been idle, then it sets speed/rpm to zero. 
+    if runtimeElapsedSeconds % 2 == 0 and runtimeElapsedSeconds > 0 and getEpochMillis() - lastRuntimeStatsPrinted > 1000:
+      loopsPerSecond = loops / runtimeElapsedSeconds
+      # print ("Runtime Stats: " + str(loops) + " in " + str(runtimeElapsedSeconds) + " seconds = " + str(loopsPerSecond) + " loops per second")
+      lastRuntimeStatsPrinted = getEpochMillis()
+      checkWheelStillness()
+
     # Read all the ADC channel values in a list.
     values = [0]*4
     # loop through the analog pins that have hall-effect speed-ometer sensors attached.
