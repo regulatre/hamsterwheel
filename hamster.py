@@ -76,6 +76,7 @@ def resetWheelStats(idx):
   # Even though the following two metrics are already reset by this time, through other means (stillness threshold was met), we'll reset them anyways. 
   stats[idx].setStat("rpm",0)
   stats[idx].setStat("mph",0)
+  stats[idx].setStat("mph_max",0)
  
   stats[idx].setStat("lastResetTime",getEpochMillis())
 
@@ -108,6 +109,8 @@ def queueStatsReading(idx):
   statsCopy["timestamp"] = getEpochMillis()
   messageQueue.put(statsCopy)
   resetWheelStats(idx)
+  dequeueReadings()
+  # TODO: More thoughtful dequeueing - use a variable to set max events to send during one batch in case the queue has built up due to network/connectivity issues.
   dequeueReadings()
   dequeueReadings()
   # finished queueing a readings object.
