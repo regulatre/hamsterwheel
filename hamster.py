@@ -78,6 +78,9 @@ def resetWheelStats(idx):
   stats[idx].setStat("mph",0)
  
   stats[idx].setStat("lastResetTime",getEpochMillis())
+
+  stats[idx].setStat("runTimeSeconds",0)
+  stats[idx].setStat("runStartTime",0)
   
   
 # Queue readings from all analog wheel speed input sensors, then reset them. Run this function during times when the wheel has stopped for best results.
@@ -101,7 +104,7 @@ def queueStatsReading(idx):
   
   stats[idx].setStat("statsPeriod",statsPeriod)
 
-  statsCopy = objCopyExcept(stats[idx].getStats(),["lastRevolutionTime","lastResetTime","startupTime"])
+  statsCopy = objCopyExcept(stats[idx].getStats(),["lastRevolutionTime","lastResetTime","startupTime","runStartTime"])
   statsCopy["timestamp"] = getEpochMillis()
   messageQueue.put(statsCopy)
   resetWheelStats(idx)
@@ -156,16 +159,39 @@ def revolutionEvent(idx,amtChange):
     # The last revolution time metric is used by the loop to clear rpm&MPH if no movement has been detected in N seconds.
     stats[idx].setStat("lastRevolutionTime",getEpochMillis())
 
+    # Make sure we track the start of the run, so we can also track run time elapsed.
+    if "runStartTime" not in stats[idx].getStats():
+      stats[idx].setStat("runStartTime",getEpochMillis())
+
+    # not the first run, but run data has been cleared and we're starting a new run.
+    if stats[idx].getStat("runStartTime") == 0:
+      print("[" + str(idx) + "] New run starting...")
+      stats[idx].setStat("runStartTime",getEpochMillis())
+
+    # Keep updating the run time seconds metric, each revolution, as it may be the last of the run.
+    runTimeMillis = getEpochMillis() - stats[idx].getStat("runStartTime")
+    runTimeSeconds = (0.0 + runTimeMillis) / 1000
+    runTimeSeconds = round(runTimeSeconds,2)
+    stats[idx].setStat("runTimeSeconds",runTimeSeconds)
+
     # Don't calculate speed if wheel has been idle. But it still counts as a revolution (which we took care of above). 
     if timeSinceLastRevolution > WHEEL_STILLNESS_THRESHOLD:
         return
 
-    print ("[" + str(idx) + "] TODO: Calibrate wheel circumfrance array. STATS=" + json.dumps(stats[idx].getStats()))
-    
+    print ("[" + str(idx) + "] " + json.dumps(stats[idx].getStats()))
+
+    # Track max mph this run. 
+    if "mph_max" in stats[idx].getStats():
+      if mph > stats[idx].getStat("mph_max"):
+        stats[idx].setStat("mph_max",mph)
+    else:
+      # no record of a max yet, current mph becomes max.
+      stats[idx].setStat("mph_max",mph)
+   
     # All sanity checks passed. This is a legitimate revolution.
     stats[idx].setStat("lastRevolutionMillis",timeSinceLastRevolution)
-    stats[idx].setStat("rpm",rpm)
-    stats[idx].setStat("mph",mph)
+    stats[idx].averageStat("rpm",rpm)
+    stats[idx].averageStat("mph",mph)
     stats[idx].averageStat("AvgAmtChange",amtChange)
 
 # If the wheel is still, then we'll set RPM & MPH to zeros. 
@@ -175,7 +201,7 @@ def wheelIsStill(idx):
   # If RPM went from >0 to 0 then this counts as a "stop" - wheel was moving, then stopped. Count the number of times this happens per wheel.
   if "rpm" in stats[idx].getStats():
     if stats[idx].getStat("rpm") > 0:
-      stats[idx].incrementStat("stops")
+      # stats[idx].incrementStat("stops")
       queueStatsReading(idx)
 
   stats[idx].setStat("rpm",0)
