@@ -12,6 +12,11 @@ import json
 import LightMQ
 import requests
 
+# for environment variables.
+import os
+# for terminating upon fatal error
+import sys
+
 
 stats = [bhstats.BhStats(),bhstats.BhStats(),bhstats.BhStats(),bhstats.BhStats()]
 messageQueue = LightMQ.LightMQ({"maxqueuelength": 999999, "persistencepath": "./lightMQ_hamster"})
@@ -31,6 +36,9 @@ adc = Adafruit_ADS1x15.ADS1115()
 GAIN = 16
 # Min change in ADC reading vs average for us to take notice.
 MIN_CHANGE=4
+
+EVENT_RECEIVER_URL=os.environ["EVENT_RECEIVER_URL"]
+
 # true fact
 INCHES_PER_MILE=63360
 WHEEL_CIRCUMFRANCE=[0,0,19.5,21]
@@ -38,6 +46,9 @@ WHEEL_CIRCUMFRANCE=[0,0,19.5,21]
 MAX_VALID_RPM=200
 # If no revolutions are detected for this period of milliseconds or more, then RPM/MPH will be set to zero. 
 WHEEL_STILLNESS_THRESHOLD = 2000
+
+def die (lastMessage):
+  print ("FATAL ERROR: " + lastMessage)
 
 def getEpochMillis():
     # time.time() returns a float, expressed in terms of seconds, but multiplying by 1000 gives us a pretty accurate milliseconds.
@@ -107,34 +118,49 @@ def queueStatsReading(idx):
 
   statsCopy = objCopyExcept(stats[idx].getStats(),["lastRevolutionTime","lastResetTime","startupTime","runStartTime"])
   statsCopy["timestamp"] = getEpochMillis()
+  statsCopy["appUptimeSeconds"] = getAppUptimeSeconds()
   messageQueue.put(statsCopy)
   resetWheelStats(idx)
-  dequeueOneReading()
-  # TODO: More thoughtful dequeueing - use a variable to set max events to send during one batch in case the queue has built up due to network/connectivity issues.
-  dequeueOneReading()
-  dequeueOneReading()
-  # finished queueing a readings object.
 
+  # Dequeue up to N items at a time as needed. TODO: Do this asychronously, in an independent thread, that won't disrupt the main loop. 
+  if (messageQueue.qsize() > 0):
+    itemCountToSend = messageQueue.qsize()
+    if itemCountToSend > 10:
+      itemCountToSend = 10
+  for i in range(itemCountToSend):
+      success = dequeueOneReading()
+      if messageQueue.qsize() > 0: 
+        print ("de-queued one message. success=" + str(success) + " qsize=" + str(messageQueue.qsize()))
+      # Connection is down. Don't try any more this round. Let the main loop do its work a bit more.
+      if success == False:
+        break
+
+
+# Return False if anything goes wrong. If false is returned, you shouldn't keep trying to dequeue messages, rather wait and try again later.
 def dequeueOneReading():
 
   # If no readings, do nothing.
   if messageQueue.qsize() < 1:
-    return
+    return True
 
   # Try sending this
   print ("Queue peek: " + json.dumps(messageQueue.peek()))
   try:
-    httpresp = requests.post("http://150.10.50.20:59655/hamsterwheel", json=messageQueue.peek())
+    augmentedEventObject = objCopyExcept(messageQueue.peek(),[])
+    # the timestamp field is set when the message is added to the queue, so it provides a very accurate point of reference to calculate queued time.
+    augmentedEventObject["queuedms"] = getEpochMillis() - augmentedEventObject["timestamp"]
+    httpresp = requests.post(EVENT_RECEIVER_URL, json=augmentedEventObject)
   except Exception as e: 
     print ("EXCEPTION while posting data to log collector. e=" + str(e))
-    return
+    return False
 
   if httpresp.status_code != 200:
     print ("ERROR sending reading, status code=" + str(httpresp.status_code) + " body=" + httpresp.text)
-    return
+    return False
 
   print ("Successfully sent one reading to log collecrtor. DE-queueing one reading!")
   messageQueue.pop()
+  return True
 
   # TODO: Catch-up logic, in case we need to "catch up" - send multiple readings per interval.
   
@@ -154,6 +180,7 @@ def revolutionEvent(idx,amtChange):
     stats[idx].setStat("analogIndex",idx)
 
     if rpm > MAX_VALID_RPM:
+        stats[idx].incrementStat("crazyHighRPMEvents")
         return
 
     # Don't count this as a revolution unless above sanity checks and debouncing logic pass. 
@@ -221,9 +248,17 @@ def checkWheelStillness():
       # last revolution time has not yet been set. Set values to zero since that indicates it's still.
       wheelIsStill(i)
 
+def doStartupSanityChecks():
+  if "EVENT_RECEIVER_URL" not in os.environ:
+    die ("ERROR: Please set env variable EVENT_RECEIVER_URL to the logstash URL to which we should post events.")
+    sys.exit(2)
 
+def getAppUptimeSeconds():
+  uptimeMillis = getEpochMillis() - APP_START_TIME
+  uptimeSeconds = round(uptimeMillis / 1000)
+  return uptimeSeconds
 
-
+APP_START_TIME=getEpochMillis()
 valuesAvg=[0.0,0.0,0.0,0.0,0.0]
 direction=[0,0,0,0]
 startTime = getEpochMillis()
