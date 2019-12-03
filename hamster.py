@@ -41,7 +41,7 @@ EVENT_RECEIVER_URL=os.environ["EVENT_RECEIVER_URL"]
 
 # true fact
 INCHES_PER_MILE=63360
-WHEEL_CIRCUMFRANCE=[0,0,19.5,21]
+WHEEL_CIRCUMFRENCE=[0,0,19.5,21]
 # Define a maximum valid RPM reading, over which we classify the reading as invalid (sometimes events are sensed twice)
 MAX_VALID_RPM=200
 # If no revolutions are detected for this period of milliseconds or more, then RPM/MPH will be set to zero. 
@@ -174,7 +174,7 @@ def revolutionEvent(idx,amtChange):
     LAST_REVOLUTION_TIME[idx] = getEpochMillis()
     
     rpm = getRPMFromOneRoundTime(timeSinceLastRevolution)
-    mph = getMPHFromRPM(rpm,WHEEL_CIRCUMFRANCE[idx])
+    mph = getMPHFromRPM(rpm,WHEEL_CIRCUMFRENCE[idx])
 
     # Make sure each stats array contains an element that reflects the analog index to which it corresponds.
     stats[idx].setStat("analogIndex",idx)
@@ -185,7 +185,7 @@ def revolutionEvent(idx,amtChange):
 
     # Don't count this as a revolution unless above sanity checks and debouncing logic pass. 
     stats[idx].incrementStat("totalRevolutions")
-    stats[idx].setStat("totalInches",stats[idx].getStat("totalRevolutions") * WHEEL_CIRCUMFRANCE[idx])
+    stats[idx].setStat("totalInches",stats[idx].getStat("totalRevolutions") * WHEEL_CIRCUMFRENCE[idx])
     # The last revolution time metric is used by the loop to clear rpm&MPH if no movement has been detected in N seconds.
     stats[idx].setStat("lastRevolutionTime",getEpochMillis())
 
