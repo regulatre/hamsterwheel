@@ -144,11 +144,11 @@ def dequeueOneReading():
     return True
 
   # Try sending this
-  print ("Queue peek: " + json.dumps(messageQueue.peek()))
   try:
     augmentedEventObject = objCopyExcept(messageQueue.peek(),[])
     # the timestamp field is set when the message is added to the queue, so it provides a very accurate point of reference to calculate queued time.
     augmentedEventObject["queuedms"] = getEpochMillis() - augmentedEventObject["timestamp"]
+    print ("TRANSMITTING EVENT: " + json.dumps(augmentedEventObject))
     httpresp = requests.post(EVENT_RECEIVER_URL, json=augmentedEventObject)
   except Exception as e: 
     print ("EXCEPTION while posting data to log collector. e=" + str(e))
