@@ -109,13 +109,13 @@ def queueStatsReading(idx):
   statsCopy["timestamp"] = getEpochMillis()
   messageQueue.put(statsCopy)
   resetWheelStats(idx)
-  dequeueReadings()
+  dequeueOneReading()
   # TODO: More thoughtful dequeueing - use a variable to set max events to send during one batch in case the queue has built up due to network/connectivity issues.
-  dequeueReadings()
-  dequeueReadings()
+  dequeueOneReading()
+  dequeueOneReading()
   # finished queueing a readings object.
 
-def dequeueReadings():
+def dequeueOneReading():
 
   # If no readings, do nothing.
   if messageQueue.qsize() < 1:
@@ -201,9 +201,9 @@ def revolutionEvent(idx,amtChange):
 def wheelIsStill(idx):
   # print ("Wheel " + str(idx) + " is idle.")
 
-  # If RPM went from >0 to 0 then this counts as a "stop" - wheel was moving, then stopped. Count the number of times this happens per wheel.
-  if "rpm" in stats[idx].getStats():
-    if stats[idx].getStat("rpm") > 0:
+  # Wheel may be still, but has it even moved at all? If so then it's worth recording. Otherwise not so much.
+  if "runTimeSeconds" in stats[idx].getStats():
+    if stats[idx].getStat("runTimeSeconds") > 0:
       # stats[idx].incrementStat("stops")
       queueStatsReading(idx)
 
@@ -268,5 +268,3 @@ while True:
             direction[i]=1
         if amtChange < 0:
             direction[i]=-1
-
-    ANALOG_INDEX=3
