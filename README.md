@@ -38,7 +38,7 @@ The wheel speed sensor is a simple inductive coil with about 100 turns. The coil
 
 ## Inductor Coils
 
-Breathing life back into old USB charger cables that got bent and no longer would charge. I snipped the USB ends off and just used the wire. They conveniently came with pre-installed ferrite chokes, which certainly won't hurt, and probably help prevent ambient EMI noise from inducing spurrious readings. 
+Breathing life back into old USB charger cables that got bent and no longer would charge. I snipped the USB ends off and re-used the cable. They conveniently came with pre-installed ferrite chokes, which certainly won't hurt, and probably help prevent ambient EMI noise from inducing spurrious readings. 
 
 <img src="images/hallEffectSensors.png" alt="Overview Diagram" width="400">
 
@@ -78,7 +78,7 @@ Which Elasticsearch happily consumes with basically no effort at all. In Grafana
 
 ## Calibration
 
-Before "going live" the kids and I drew up the project on paper and discussed each component. We each took turns taking measurements of the wheels, and installing the wheel speed sensor magnets. The measurements we took included: radius, and circumfrance. We checked, and double-checked the most important metric (circumfrance) by rolling the wheel on the table next to a tape measure, and writing down each measurement, throwing out the bad ones, and averaging the most accurate ones. 
+Before "going live" the kids and I drew up the project on paper and discussed each component. We each took turns taking measurements of the wheels, and installing the wheel speed sensor magnets. The measurements we took included: radius, each kid's height and width, the cat's height, and wheel circumfrence. Not all measurements were needed but the kids tend to get carried away when they are inspired. We checked, and double-checked the most important metric (circumfrence) by rolling the wheel on the table next to a tape measure, and writing down each measurement, throwing out the bad ones, and averaging the most accurate ones. 
 
 In the application, a wide range of calibrations, and logic had to be added to carefully measure each revolution once and only once. The signal coming into the ADC is a typical impulse signal, where the waves grow rapidly to a peak and then decline rapidly. By defining a trigger threshold, and trigger direction, I wrote code that detects each revolution very effectively and thus far doesn't show any signs of invalid data (we'll see in a few weeks when I have more data to look at too).
 
