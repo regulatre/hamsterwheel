@@ -40,7 +40,12 @@ The wheel speed sensor is a simple inductive coil with about 100 turns. The coil
 
 Breathing life back into old USB charger cables that got bent and no longer would charge. I snipped the USB ends off and re-used the cable. They conveniently came with pre-installed ferrite chokes, which certainly won't hurt, and probably help prevent ambient EMI noise from inducing spurrious readings. 
 
+The inductor coils (wheel speed probes) are just an air-core coil of wire with a 1k pull-down at the ADC.
 <img src="images/hallEffectSensors.png" alt="Overview Diagram" width="400">
+
+When a magnet passes by the coil an electrical impulse is generated, which is what the ADC measures, and the software detects, cleans up, and turns into events. 
+<img src="images/DS1Z_QuickPrint3.png" alt="Overview Diagram" width="800">
+
 
 ## Observations
 
