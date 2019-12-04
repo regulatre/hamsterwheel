@@ -93,6 +93,8 @@ def resetWheelStats(idx):
 
   stats[idx].setStat("runTimeSeconds",0)
   stats[idx].setStat("runStartTime",0)
+
+  stats[idx].setStat("crazyHighRPMEvents",0)
   
   
 # Queue readings from all analog wheel speed input sensors, then reset them. Run this function during times when the wheel has stopped for best results.
@@ -120,7 +122,6 @@ def queueStatsReading(idx):
   statsCopy["timestamp"] = getEpochMillis()
   statsCopy["appUptimeSeconds"] = getAppUptimeSeconds()
   messageQueue.put(statsCopy)
-  resetWheelStats(idx)
 
   # Dequeue up to N items at a time as needed. TODO: Do this asychronously, in an independent thread, that won't disrupt the main loop. 
   if (messageQueue.qsize() > 0):
@@ -228,14 +229,13 @@ def revolutionEvent(idx,amtChange):
 def wheelIsStill(idx):
   # print ("Wheel " + str(idx) + " is idle.")
 
-  # Wheel may be still, but has it even moved at all? If so then it's worth recording. Otherwise not so much.
+  # Wheel may be still, but has it even moved at all? If so then it's worth recording. Otherwise not so much. In any case we reset the stats for the wheel before returning.
   if "runTimeSeconds" in stats[idx].getStats():
     if stats[idx].getStat("runTimeSeconds") > 0:
       # stats[idx].incrementStat("stops")
       queueStatsReading(idx)
 
-  stats[idx].setStat("rpm",0)
-  stats[idx].setStat("mph",0)
+  resetWheelStats()
 
 # Check all wheels for stillness, taking action to update rate gauges on any wheels that are still.
 def checkWheelStillness():
