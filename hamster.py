@@ -43,7 +43,7 @@ EVENT_RECEIVER_URL=""
 INCHES_PER_MILE=63360
 ## circumfrences must be set via environment
 WHEEL_CIRCUMFRENCE=[] 
-# Indexes present will be set to include the indexes for which circumfrences are specified. Any index missing a circumfrance is assumed to not be present.
+# Indexes present will be set to include the indexes for which circumfrences are specified. Any index missing a circumfrence is assumed to not be present.
 WHEEL_INDEXES_PRESENT = []
 # Define a maximum valid RPM reading, over which we classify the reading as invalid (sometimes events are sensed twice)
 MAX_VALID_RPM=200
@@ -290,7 +290,7 @@ def doStartupSanityChecks():
     WHEEL_CIRCUMFRENCE[1] = float(circumfrence_strings_array[1])
     WHEEL_CIRCUMFRENCE[2] = float(circumfrence_strings_array[2])
     WHEEL_CIRCUMFRENCE[3] = float(circumfrence_strings_array[3])
-    print ("Wheel Circumfrances: " + json.dumps(WHEEL_CIRCUMFRENCE))
+    print ("Wheel Circumfrences: " + json.dumps(WHEEL_CIRCUMFRENCE))
 
   # Create an array with values like this: [0] [2,3] etc - indexes represent the analog indexes that are present.
   WHEEL_INDEXES_PRESENT=[]
