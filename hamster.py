@@ -307,7 +307,10 @@ def getAppUptimeSeconds():
   uptimeSeconds = round(uptimeMillis / 1000)
   return uptimeSeconds
 
+
+
 APP_START_TIME=getEpochMillis()
+doStartupSanityChecks()
 valuesAvg=[0.0,0.0,0.0,0.0,0.0]
 direction=[0,0,0,0]
 startTime = getEpochMillis()
