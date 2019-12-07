@@ -36,12 +36,15 @@ GAIN = 16
 # Min change in ADC reading vs average for us to take notice.
 MIN_CHANGE=4
 
-EVENT_RECEIVER_URL=os.environ["EVENT_RECEIVER_URL"]
+# Must be set via environment.
+EVENT_RECEIVER_URL=""
 
 # true fact
 INCHES_PER_MILE=63360
 ## circumfrences must be set via environment
 WHEEL_CIRCUMFRENCE=[] 
+# Indexes present will be set to include the indexes for which circumfrences are specified. Any index missing a circumfrance is assumed to not be present.
+WHEEL_INDEXES_PRESENT = []
 # Define a maximum valid RPM reading, over which we classify the reading as invalid (sometimes events are sensed twice)
 MAX_VALID_RPM=200
 # If no revolutions are detected for this period of milliseconds or more, then RPM/MPH will be set to zero. 
@@ -239,7 +242,7 @@ def wheelIsStill(idx):
 
 # Check all wheels for stillness, taking action to update rate gauges on any wheels that are still.
 def checkWheelStillness():
-  for i in [2,3]:
+  for i in WHEEL_INDEXES_PRESENT:
     if "lastRevolutionTime" in stats[i].getStats():
       timeSinceLastRevolution = getEpochMillis() - stats[i].getStat("lastRevolutionTime")
       if timeSinceLastRevolution > WHEEL_STILLNESS_THRESHOLD:
@@ -249,9 +252,33 @@ def checkWheelStillness():
       wheelIsStill(i)
 
 def doStartupSanityChecks():
+
+  global WHEEL_STILLNESS_THRESHOLD
+  global GAIN
+  global MAX_VALID_RPM
+  global EVENT_RECEIVER_URL
+  global WHEEL_INDEXES_PRESENT
+  global WHEEL_CIRCUMFRENCE
+
+
+  if "WHEEL_STILLNESS_THRESHOLD" in os.environ:
+    WHEEL_STILLNESS_THRESHOLD = float(os.environ["WHEEL_STILLNESS_THRESHOLD"])
+    print ("Overriding wheel stillness threshold with value from environment: " + json.dumps(WHEEL_STILLNESS_THRESHOLD))
+
+  if "GAIN" in os.environ:
+    GAIN=float(os.environ["GAIN"])
+    print ("Overriding ADC GAIN with value from environment: " + json.dumps(GAIN))
+
+  if "MAX_VALID_RPM" in os.environ:
+    MAX_VALID_RPM=float(os.environ["MAX_VALID_RPM"])
+    print ("Overriding MAX_VALID_RPM with value from environment: " + json.dumps(MAX_VALID_RPM))
+
   if "EVENT_RECEIVER_URL" not in os.environ:
     die ("ERROR: Please set env variable EVENT_RECEIVER_URL to the logstash URL to which we should post events.")
     sys.exit(2)
+  else:
+    print ("Event receiver URL: " + json.dumps(os.environ["EVENT_RECEIVER_URL"]))
+
 
   if "WHEEL_CIRCUMFRENCES" not in os.environ:
     die ("ERROR: Please set env variable WHEEL_CIRCUMFRENCES to four floating point values eg. 0,0,19.5,21.0")
@@ -265,6 +292,13 @@ def doStartupSanityChecks():
     WHEEL_CIRCUMFRENCE[3] = float(circumfrence_strings_array[3])
     print ("Wheel Circumfrances: " + json.dumps(WHEEL_CIRCUMFRENCE))
 
+  # Create an array with values like this: [0] [2,3] etc - indexes represent the analog indexes that are present.
+  WHEEL_INDEXES_PRESENT=[]
+  if WHEEL_CIRCUMFRENCE[0] > 0: WHEEL_INDEXES_PRESENT.append(0)
+  if WHEEL_CIRCUMFRENCE[1] > 0: WHEEL_INDEXES_PRESENT.append(1)
+  if WHEEL_CIRCUMFRENCE[2] > 0: WHEEL_INDEXES_PRESENT.append(2)
+  if WHEEL_CIRCUMFRENCE[3] > 0: WHEEL_INDEXES_PRESENT.append(3)
+  print ("Wheel / Analog Inputs present: " + json.dumps(WHEEL_INDEXES_PRESENT))
 
 
 
@@ -279,6 +313,7 @@ direction=[0,0,0,0]
 startTime = getEpochMillis()
 lastRuntimeStatsPrinted = startTime
 loops=0
+stats[0].setStat("startupTime",getEpochMillis())
 stats[1].setStat("startupTime",getEpochMillis())
 stats[2].setStat("startupTime",getEpochMillis())
 stats[3].setStat("startupTime",getEpochMillis())
@@ -297,7 +332,7 @@ while True:
     # Read all the ADC channel values in a list.
     values = [0]*4
     # loop through the analog pins that have hall-effect speed-ometer sensors attached.
-    for i in [2,3]:
+    for i in WHEEL_INDEXES_PRESENT:
         # Read the specified ADC channel using the previously set gain value.
         values[i] = adc.read_adc(i, gain=GAIN)
         # Note you can also pass in an optional data_rate parameter that controls
