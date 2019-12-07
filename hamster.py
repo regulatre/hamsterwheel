@@ -234,7 +234,7 @@ def wheelIsStill(idx):
       # stats[idx].incrementStat("stops")
       queueStatsReading(idx)
 
-  resetWheelStats()
+  resetWheelStats(idx)
 
 # Check all wheels for stillness, taking action to update rate gauges on any wheels that are still.
 def checkWheelStillness():
