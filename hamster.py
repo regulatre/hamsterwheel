@@ -1,10 +1,9 @@
-# Simple demo of reading each analog input from the ADS1x15 and printing it to
-# the screen.
-# Author: Tony DiCola
-# License: Public Domain
+
+
+# Thank you to Adafruit, and Tony DiCola for writing the ADS1115 ADC code that served as the starting point for this application. 
+
 import time
 
-# Import the ADS1x15 module.
 import Adafruit_ADS1x15
 
 import bhstats
@@ -284,7 +283,6 @@ while True:
     for i in [2,3]:
         # Read the specified ADC channel using the previously set gain value.
         values[i] = adc.read_adc(i, gain=GAIN)
-        valuesAvg[i] = (valuesAvg[i] + values[i]) / 2
         # Note you can also pass in an optional data_rate parameter that controls
         # the ADC conversion time (in samples/second). Each chip has a different
         # set of allowed data rate values, see datasheet Table 9 config register
@@ -292,6 +290,7 @@ while True:
         #values[i] = adc.read_adc(i, gain=GAIN, data_rate=128)
         # Each value will be a 12 or 16 bit signed integer value depending on the        
         # ADC (ADS1015 = 12-bit, ADS1115 = 16-bit).
+        valuesAvg[i] = (valuesAvg[i] + values[i]) / 2
         amtChange = values[i] - valuesAvg[i]
 
         if (i==3 or i==2) and amtChange > MIN_CHANGE and direction[i] != 1:

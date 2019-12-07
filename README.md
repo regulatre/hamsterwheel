@@ -38,7 +38,7 @@ The wheel speed sensor is a simple inductive coil with about 100 turns. The coil
 
 ## Inductor Coils
 
-Breathing life back into old USB charger cables that got bent and no longer would charge. I snipped the USB ends off and re-used the cable. They conveniently came with pre-installed ferrite chokes, which help mute ambient EMI noise from inducing spurrious readings. 
+Breathing life back into old USB charger cables that got bent and no longer would charge... I snipped the USB ends off and re-used the cable. They conveniently came with pre-installed ferrite chokes, which help mute ambient EMI noise from inducing spurrious readings. 
 
 The inductor coils (wheel speed probes) are just an air-core coil of wire with a 1k pull-down at the ADC.
 <img src="images/hallEffectSensors.png" alt="Overview Diagram" width="400">
@@ -49,7 +49,7 @@ When a magnet passes by the coil an electrical impulse is generated, which is wh
 
 ## Observations
 
-The hamsters start their exercise about 10 minutes after the lights go out, and typically exercise about four hours each night. When one hamster starts running, the other tends to start too, although at times, the data seems to suggest that Fluff doesn't start significant exercise until after Cutie's wheel cools down for a while. Cutie's wheel does make a lot of racket and may be intimidating to Fluff. Future experiment: oil the wheel and see if this increases Fluff's activity. 
+The hamsters start their exercise about 10 minutes after the lights go out. They both typically exercise for about four hours before calling it a night. The two hamster habatats are situated side by side. When one hamster starts running the other tends to start too, although at times, the data seems to suggest that Fluff doesn't start significant exercise until after Cutie's wheel cools down for a while. Cutie's wheel does make a lot of racket and may be intimidating to Fluff. Future experiment: oil the wheel and see if this increases Fluff's activity. 
 
 ## Data Schema
 
@@ -83,9 +83,9 @@ Which Elasticsearch happily consumes with basically no effort at all. In Grafana
 
 ## Calibration
 
-Before "going live" the kids and I drew up the project on paper and discussed each component. We each took turns taking measurements of the wheels, and installing the wheel speed sensor magnets. The measurements we took included: radius, each kid's height and width, the cat's height, and wheel circumfrence. Not all measurements were needed but the kids tend to get carried away when they are inspired. We checked, and double-checked the most important metric (circumfrence) by rolling the wheel on the table next to a tape measure, and writing down each measurement, throwing out the bad ones, and averaging the most accurate ones. 
+Before "going live" the kids and I drew up the project on paper and discussed each component. We each took turns taking measurements of the wheels, and installing the wheel speed sensor magnets. The measurements we took included: radius, each kid's height and width, the cat's height, and wheel circumfrence. Not all measurements were needed but the kids tend to get carried away when they are inspired. We checked, and double-checked the most important metric (circumfrence) by rolling the wheel on the table next to a tape measure and writing down each measurement. We eliminated the bad measurements, and averaged the most accurate ones. 
 
-In the application, a wide range of calibrations, and logic had to be added to carefully measure each revolution once and only once. The signal coming into the ADC is a typical impulse signal, where the waves grow rapidly to a peak and then decline rapidly. By defining a trigger threshold, and trigger direction, I wrote code that detects each revolution very effectively and thus far doesn't show any signs of invalid data (we'll see in a few weeks when I have more data to look at too).
+In the [python application](hamster.py), a wide range of calibrations and logic had to be added to carefully measure each revolution once and only once. The signal coming into the ADC is a typical impulse signal, where the waves grow rapidly to a peak and then decline rapidly. By defining a trigger threshold, and trigger direction, I wrote code that detects each revolution very effectively and thus far doesn't show any signs of invalid data (we'll see in a few weeks when I have more data to look at too).
 
 ## Running the application
 
@@ -119,5 +119,6 @@ Successfully sent one reading to log collecrtor. DE-queueing one reading!
 
 1. Create a systemd service unit to run the application
 1. Experiment with different ways to increase the hamsters' activity levels, such as quieting down their wheels (so they aren't scared to run in them), rearranging the layout, moving them away from eachother (prevent one from being scared by the other's noise), various foods, ...
+1. Code cleanup. Credits. 
 
 
