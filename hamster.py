@@ -280,12 +280,12 @@ def doStartupSanityChecks():
     print ("Event receiver URL: " + json.dumps(os.environ["EVENT_RECEIVER_URL"]))
 
 
-  if "WHEEL_CIRCUMFRENCES" not in os.environ:
-    die ("ERROR: Please set env variable WHEEL_CIRCUMFRENCES to four floating point values eg. 0,0,19.5,21.0")
+  if "WHEEL_CIRCUMFRENCE" not in os.environ:
+    die ("ERROR: Please set env variable WHEEL_CIRCUMFRENCE to four floating point values eg. 0,0,19.5,21.0")
     sys.exit(2)
   else:
-    WHEEL_CIRCUMFRENCE=[]
-    circumfrence_strings_array = os.environ["WHEEL_CIRCUMFRENCES"].split(",")
+    WHEEL_CIRCUMFRENCE=[0,0,0,0]
+    circumfrence_strings_array = os.environ["WHEEL_CIRCUMFRENCE"].split(",")
     WHEEL_CIRCUMFRENCE[0] = float(circumfrence_strings_array[0])
     WHEEL_CIRCUMFRENCE[1] = float(circumfrence_strings_array[1])
     WHEEL_CIRCUMFRENCE[2] = float(circumfrence_strings_array[2])
