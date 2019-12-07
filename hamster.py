@@ -36,6 +36,8 @@ GAIN = 16
 # Min change in ADC reading vs average for us to take notice.
 MIN_CHANGE=4
 
+# Can be set to True via env variable, to generate copious amounts of analog debugging detail.
+DEBUG_ANALOG=False
 # Must be set via environment.
 EVENT_RECEIVER_URL=""
 
@@ -142,6 +144,7 @@ def queueStatsReading(idx):
 
 # Return False if anything goes wrong. If false is returned, you shouldn't keep trying to dequeue messages, rather wait and try again later.
 def dequeueOneReading():
+  global EVENT_RECEIVER_URL
 
   # If no readings, do nothing.
   if messageQueue.qsize() < 1:
@@ -174,6 +177,10 @@ def dequeueOneReading():
 LAST_REVOLUTION_TIME = [getEpochMillis(), getEpochMillis(), getEpochMillis(), getEpochMillis()]
 # This function gets fired every time a "revolution" is detected - one complete turn around, or one pass of the hall-effect sensor.
 def revolutionEvent(idx,amtChange):
+    global WHEEL_CIRCUMFRENCE
+    global MAX_VALID_RPM
+    global WHEEL_STILLNESS_THRESHOLD
+
     timeSinceLastRevolution=getEpochMillis()-LAST_REVOLUTION_TIME[idx];
     LAST_REVOLUTION_TIME[idx] = getEpochMillis()
     
@@ -253,12 +260,18 @@ def checkWheelStillness():
 
 def doStartupSanityChecks():
 
+  global DEBUG_ANALOG
   global WHEEL_STILLNESS_THRESHOLD
   global GAIN
   global MAX_VALID_RPM
   global EVENT_RECEIVER_URL
   global WHEEL_INDEXES_PRESENT
   global WHEEL_CIRCUMFRENCE
+
+  if "DEBUG_ANALOG" in os.environ and os.environ["DEBUG_ANALOG"].lower() == "true": 
+    DEBUG_ANALOG=True
+  else: 
+    DEBUG_ANALOG=False
 
 
   if "WHEEL_STILLNESS_THRESHOLD" in os.environ:
@@ -277,7 +290,8 @@ def doStartupSanityChecks():
     die ("ERROR: Please set env variable EVENT_RECEIVER_URL to the logstash URL to which we should post events.")
     sys.exit(2)
   else:
-    print ("Event receiver URL: " + json.dumps(os.environ["EVENT_RECEIVER_URL"]))
+    EVENT_RECEIVER_URL=os.environ["EVENT_RECEIVER_URL"]
+    print ("Event receiver URL: " + json.dumps(EVENT_RECEIVER_URL))
 
 
   if "WHEEL_CIRCUMFRENCE" not in os.environ:
@@ -320,13 +334,15 @@ stats[0].setStat("startupTime",getEpochMillis())
 stats[1].setStat("startupTime",getEpochMillis())
 stats[2].setStat("startupTime",getEpochMillis())
 stats[3].setStat("startupTime",getEpochMillis())
+print ("READY SET GO!!!")
 while True:
     loops = loops + 1
     runtimeElapsedSeconds = int((getEpochMillis() - startTime)/1000)
     # This block started as a periodic metrics print, but evolved into a "stillness" detection block. If wheel has been idle, then it sets speed/rpm to zero. 
     if runtimeElapsedSeconds % 2 == 0 and runtimeElapsedSeconds > 0 and getEpochMillis() - lastRuntimeStatsPrinted > 1000:
       loopsPerSecond = loops / runtimeElapsedSeconds
-      #print ("Runtime Stats: " + str(loops) + " in " + str(runtimeElapsedSeconds) + " seconds = " + str(loopsPerSecond) + " loops per second")
+      if DEBUG_ANALOG==True:
+          print ("ANALOG DEBUG: loops=" + str(loops) + " in " + str(runtimeElapsedSeconds) + " seconds = " + str(loopsPerSecond) + " loops per second")
       #print ("avg2=" + str(valuesAvg[2]))
       #print ("avg3=" + str(valuesAvg[3]))
       lastRuntimeStatsPrinted = getEpochMillis()
@@ -347,8 +363,10 @@ while True:
         # ADC (ADS1015 = 12-bit, ADS1115 = 16-bit).
         valuesAvg[i] = (valuesAvg[i] + values[i]) / 2
         amtChange = values[i] - valuesAvg[i]
+        if DEBUG_ANALOG==True:
+          print ("avg[" + str(i) + "]=" + str(valuesAvg[i]))
 
-        if (i==3 or i==2) and amtChange > MIN_CHANGE and direction[i] != 1:
+        if amtChange > MIN_CHANGE and direction[i] != 1:
             # print ("[A" + str(i) + "]: " + str(amtChange) + " from " + str(values[i]) + " to " + str(valuesAvg[i]))
             revolutionEvent(i,amtChange)
             # NOTE: We were sleeping for 0.2 here when it was just one input. With multiple inputs we need to do an elapsed time check instead of a sleep. That way inputs don't interfere with eachother.
@@ -357,3 +375,5 @@ while True:
             direction[i]=1
         if amtChange < 0:
             direction[i]=-1
+
+
