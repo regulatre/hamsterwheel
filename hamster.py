@@ -40,7 +40,8 @@ EVENT_RECEIVER_URL=os.environ["EVENT_RECEIVER_URL"]
 
 # true fact
 INCHES_PER_MILE=63360
-WHEEL_CIRCUMFRENCE=[0,0,19.5,21]
+## circumfrences must be set via environment
+WHEEL_CIRCUMFRENCE=[] 
 # Define a maximum valid RPM reading, over which we classify the reading as invalid (sometimes events are sensed twice)
 MAX_VALID_RPM=200
 # If no revolutions are detected for this period of milliseconds or more, then RPM/MPH will be set to zero. 
@@ -252,6 +253,21 @@ def doStartupSanityChecks():
     die ("ERROR: Please set env variable EVENT_RECEIVER_URL to the logstash URL to which we should post events.")
     sys.exit(2)
 
+  if "WHEEL_CIRCUMFRENCES" not in os.environ:
+    die ("ERROR: Please set env variable WHEEL_CIRCUMFRENCES to four floating point values eg. 0,0,19.5,21.0")
+    sys.exit(2)
+  else:
+    WHEEL_CIRCUMFRENCE=[]
+    circumfrence_strings_array = os.environ["WHEEL_CIRCUMFRENCES"].split(",")
+    WHEEL_CIRCUMFRENCE[0] = float(circumfrence_strings_array[0])
+    WHEEL_CIRCUMFRENCE[1] = float(circumfrence_strings_array[1])
+    WHEEL_CIRCUMFRENCE[2] = float(circumfrence_strings_array[2])
+    WHEEL_CIRCUMFRENCE[3] = float(circumfrence_strings_array[3])
+    print ("Wheel Circumfrances: " + json.dumps(WHEEL_CIRCUMFRENCE))
+
+
+
+
 def getAppUptimeSeconds():
   uptimeMillis = getEpochMillis() - APP_START_TIME
   uptimeSeconds = round(uptimeMillis / 1000)
@@ -263,6 +279,7 @@ direction=[0,0,0,0]
 startTime = getEpochMillis()
 lastRuntimeStatsPrinted = startTime
 loops=0
+stats[1].setStat("startupTime",getEpochMillis())
 stats[2].setStat("startupTime",getEpochMillis())
 stats[3].setStat("startupTime",getEpochMillis())
 while True:

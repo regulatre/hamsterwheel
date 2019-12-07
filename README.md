@@ -87,6 +87,20 @@ Before "going live" the kids and I drew up the project on paper and discussed ea
 
 In the [python application](hamster.py), a wide range of calibrations and logic had to be added to carefully measure each revolution once and only once. The signal coming into the ADC is a typical impulse signal, where the waves grow rapidly to a peak and then decline rapidly. By defining a trigger threshold, and trigger direction, I wrote code that detects each revolution very effectively and thus far doesn't show any signs of invalid data (we'll see in a few weeks when I have more data to look at too).
 
+## Installation
+
+[Old procedure](https://learn.adafruit.com/raspberry-pi-analog-to-digital-converters/ads1015-slash-ads1115)
+
+
+Install CircuitPython
+
+pip3 install --user  adafruit-circuitpython-ads1x15
+
+
+
+
+
+
 ## Running the application
 
 ```
