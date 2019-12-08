@@ -58,24 +58,28 @@ Every time the wheel stops spinning for more than about 2 seconds, the current s
 Individual messages look something like this: 
 
 ``` json
+
 {
-  "appUptimeSeconds": 2778,
-  "runTimeSeconds": 13.9,
-  "mph": 1.546,
-  "timestamp": 1575351483019,
-  "rpm": 83.739,
-  "statsPeriod": 21999,
-  "lastRevolutionMillis": 794,
-  "@version": "1",
-  "@timestamp": "2019-12-03T05:38:03.057Z",
-  "totalRevolutions": 23,
-  "queuedms": 0,
-  "mph_max": 1.976,
-  "AvgAmtChange": 9.027,
+  "appUptimeSeconds": 190790,
+  "statsPeriod": 10010,
+  "lastRevolutionMillis": 516,
+  "@timestamp": "2019-12-08T01:23:01.669Z",
+  "crazyHighRPMEvents": 0,
+  "mph_max": 2.142,
+  "hamsterName": "cutie",
+  "runTimeSeconds": 6.96,
+  "AvgAmtChange": 12.536,
+  "totalRevolutions": 7,
+  "mph": 1.454,
+  "rpm": 78.719,
   "analogIndex": 2,
-  "totalInches": 448.5,
-  "host": "x.x.x.x"
+  "host": "x.x.x.x",
+  "queuedms": 0,
+  "totalInches": 136.5
 }
+
+Some fields in the message seen above such as hamsterName are added by my logstash data enrichment pipeline. 
+
 
 ```
 

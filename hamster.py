@@ -136,7 +136,7 @@ def queueStatsReading(idx):
   for i in range(itemCountToSend):
       success = dequeueOneReading()
       if messageQueue.qsize() > 0: 
-        print ("de-queued one message. success=" + str(success) + " qsize=" + str(messageQueue.qsize()))
+        print ("Attempted dequeue. success=" + str(success) + " qsize=" + str(messageQueue.qsize()))
       # Connection is down. Don't try any more this round. Let the main loop do its work a bit more.
       if success == False:
         break
@@ -165,7 +165,7 @@ def dequeueOneReading():
     print ("ERROR sending reading, status code=" + str(httpresp.status_code) + " body=" + httpresp.text)
     return False
 
-  print ("Successfully sent one reading to log collecrtor. DE-queueing one reading!")
+  print ("Successfully sent one reading to log collector. DE-queueing one reading!")
   messageQueue.pop()
   return True
 
