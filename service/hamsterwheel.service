@@ -6,6 +6,7 @@ After=network.target
 Type=simple
 User=pi
 WorkingDirectory=/home/pi/git/hamsterwheel/
+# Remember to sudo pip3 install adafruit-ads1x15
 ExecStart=/usr/bin/python3 ./hamster.py
 Restart=always
 # If a service restart is required, pause this many seconds. Default is 100ms which leads to failed service too quickly if say alsa isn't ready yet on boot.
