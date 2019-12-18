@@ -1,0 +1,24 @@
+[Unit]
+Description=Hamster Wheel ADC App and Metrics Relay
+After=network.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/git/hamsterwheel/
+ExecStart=/usr/bin/python3 ./hamster.py
+Restart=always
+# If a service restart is required, pause this many seconds. Default is 100ms which leads to failed service too quickly if say alsa isn't ready yet on boot.
+RestartSec=10
+
+# Tuning parameters, specific to each ADC environment.
+Environment=WHEEL_CIRCUMFRENCE=0,15,0,0
+Environment=EVENT_RECEIVER_URL=http://localhost/hamsterwheel
+Environment=MAX_VALID_RPM=300
+Environment=GAIN=4
+
+
+[Install]
+WantedBy=multi-user.target
+
+
