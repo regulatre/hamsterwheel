@@ -138,5 +138,7 @@ Successfully sent one reading to log collecrtor. DE-queueing one reading!
 1. Create a systemd service unit to run the application
 1. Experiment with different ways to increase the hamsters' activity levels, such as quieting down their wheels (so they aren't scared to run in them), rearranging the layout, moving them away from eachother (prevent one from being scared by the other's noise), various foods, ...
 1. Code cleanup. Credits. 
+1. (Credit to Shawn N) Report "wattage" in terms of how much energy the hamsters would conceivably generate if they were driving a motor generator
+1. Report Calories burned [[Calorie/water consumption data](https://www.ncbi.nlm.nih.gov/books/NBK231928/)]
 
 
