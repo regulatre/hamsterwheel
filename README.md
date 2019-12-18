@@ -20,7 +20,7 @@ The project has three main parts: measurement hardware, measurement software, an
 <img src="images/hamsterWheelSpeedometerDiagram1.png" alt="Overview Diagram" width="800">
 
 ## Grafana Statistics Dashboard
-<img src="images/hamsterWheelStatisticsDay2partial.png" alt="Overview Diagram" width="800">
+<img src="images/hamsterStatsAll3.png" alt="Overview Diagram" width="800">
 
 ## Raspberry Pi with ADC HAT
 
