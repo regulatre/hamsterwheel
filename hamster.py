@@ -267,6 +267,7 @@ def doStartupSanityChecks():
   global EVENT_RECEIVER_URL
   global WHEEL_INDEXES_PRESENT
   global WHEEL_CIRCUMFRENCE
+  global MIN_CHANGE
 
   if "DEBUG_ANALOG" in os.environ and os.environ["DEBUG_ANALOG"].lower() == "true": 
     DEBUG_ANALOG=True
@@ -293,6 +294,9 @@ def doStartupSanityChecks():
     EVENT_RECEIVER_URL=os.environ["EVENT_RECEIVER_URL"]
     print ("Event receiver URL: " + json.dumps(EVENT_RECEIVER_URL))
 
+  if "MIN_CHANGE" in os.environ:
+    MIN_CHANGE = float(os.environ["MIN_CHANGE"])
+    print ("Overriding MIN_CHANGE with value from environment. New value: " + str(MIN_CHANGE))
 
   if "WHEEL_CIRCUMFRENCE" not in os.environ:
     die ("ERROR: Please set env variable WHEEL_CIRCUMFRENCE to four floating point values eg. 0,0,19.5,21.0")
