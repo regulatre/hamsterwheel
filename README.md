@@ -140,5 +140,7 @@ Successfully sent one reading to log collecrtor. DE-queueing one reading!
 1. Code cleanup. Credits. 
 1. (Credit to Shawn N) Report "wattage" in terms of how much energy the hamsters would conceivably generate if they were driving a motor generator
 1. Report Calories burned [[Calorie/water consumption data](https://www.ncbi.nlm.nih.gov/books/NBK231928/)]
+1. Errors in the analog data can be smoothed out with an electrolytic capacor across the input to ground. Successfully applied to Sprinkles' ADC.
+ 
 
 
