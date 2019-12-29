@@ -206,8 +206,9 @@ def revolutionEvent(idx,amtChange):
 
     # not the first run, but run data has been cleared and we're starting a new run.
     if stats[idx].getStat("runStartTime") == 0:
-      print("[" + str(idx) + "] New run starting...")
+      print("[" + str(idx) + "] New run starting... amtChange=" + str(amtChange))
       stats[idx].setStat("runStartTime",getEpochMillis())
+      stats[idx].setStat("runStartAmtChange",amtChange)
 
     # Keep updating the run time seconds metric, each revolution, as it may be the last of the run.
     runTimeMillis = getEpochMillis() - stats[idx].getStat("runStartTime")
@@ -368,16 +369,16 @@ while True:
         valuesAvg[i] = (valuesAvg[i] + values[i]) / 2
         amtChange = values[i] - valuesAvg[i]
         if DEBUG_ANALOG==True:
-          print ("avg[" + str(i) + "]=" + str(valuesAvg[i]))
+          print ("avg[" + str(i) + "]=" + str(round(valuesAvg[i],2)) + " current=" + str(round(values[i],2)) + " chg=" + str(round(amtChange,2)))
 
         if amtChange > MIN_CHANGE and direction[i] != 1:
-            # print ("[A" + str(i) + "]: " + str(amtChange) + " from " + str(values[i]) + " to " + str(valuesAvg[i]))
+            # print ("[A" + str(i) + "]: " + str(round(amtChange,2)) + " from " + str(round(values[i],2)) + " to " + str(round(valuesAvg[i],2)))
             revolutionEvent(i,amtChange)
             # NOTE: We were sleeping for 0.2 here when it was just one input. With multiple inputs we need to do an elapsed time check instead of a sleep. That way inputs don't interfere with eachother.
         
         if amtChange > MIN_CHANGE:
             direction[i]=1
-        if amtChange < 0:
+        if amtChange < (0-MIN_CHANGE) :
             direction[i]=-1
 
 

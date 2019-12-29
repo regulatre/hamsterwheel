@@ -6,17 +6,20 @@ After=network.target
 Type=simple
 User=pi
 WorkingDirectory=/home/pi/git/hamsterwheel/
-# Remember to sudo pip3 install adafruit-ads1x15
 ExecStart=/usr/bin/python3 ./hamster.py
 Restart=always
 # If a service restart is required, pause this many seconds. Default is 100ms which leads to failed service too quickly if say alsa isn't ready yet on boot.
 RestartSec=10
 
 # Tuning parameters, specific to each ADC environment.
-Environment=WHEEL_CIRCUMFRENCE=0,15,0,0
-Environment=EVENT_RECEIVER_URL=http://localhost/hamsterwheel
+Environment=WHEEL_CIRCUMFRENCE=0,0,21.5,21.5
+Environment=EVENT_RECEIVER_URL=http://192.168.1.100/hamsterwheel
 Environment=MAX_VALID_RPM=300
+# crazyHighRPMEvents may show 5-10 errors but its because its sensitive and the apparatus is doing its job. better to be sensitive and get all the turns, than less sensitive and miss turns. 
 Environment=GAIN=4
+Environment=MIN_CHANGE=2
+Environment=DEBUG_ANALOG=false
+
 
 
 [Install]
