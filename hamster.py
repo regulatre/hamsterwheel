@@ -250,18 +250,20 @@ def revolutionEvent(idx,amtChange):
     if DEBUG_ANALOG==True:
       print ("[" + str(idx) + "] " + json.dumps(stats[idx].getStats()))
 
-    # Track max mph this run. 
-    if "mph_max" in stats[idx].getStats():
-      if mph > stats[idx].getStat("mph_max"):
-        stats[idx].setStat("mph_max",mph)
-    else:
-      # no record of a max yet, current mph becomes max.
-      stats[idx].setStat("mph_max",mph)
+    # # Track max mph this run. 
+    # if "mph_max" in stats[idx].getStats():
+    #   if mph > stats[idx].getStat("mph_max"):
+    #     stats[idx].setStat("mph_max",mph)
+    # else:
+    #   # no record of a max yet, current mph becomes max.
+    #   stats[idx].setStat("mph_max",mph)
    
     # All sanity checks passed. This is a legitimate revolution.
     stats[idx].setStat("lastRevolutionMillis",timeSinceLastRevolution)
     stats[idx].averageStat("rpm",rpm)
+    stats[idx].recordMinMax("rpm",rpm)
     stats[idx].averageStat("mph",mph)
+    stats[idx].recordMinMax("mph",mph)
     stats[idx].averageStat("AvgAmtChange",amtChange)
 
 # If the wheel is still, then we'll set RPM & MPH to zeros. 
