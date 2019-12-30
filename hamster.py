@@ -163,7 +163,11 @@ def dequeueOneReading():
     augmentedEventObject = objCopyExcept(messageQueue.peek(),[])
     # the timestamp field is set when the message is added to the queue, so it provides a very accurate point of reference to calculate queued time.
     augmentedEventObject["queuedms"] = getEpochMillis() - augmentedEventObject["timestamp"]
-    print ("TRANSMITTING EVENT: " + json.dumps(augmentedEventObject))
+    if DEBUG_ANALOG==True:
+      print ("TRANSMITTING EVENT: " + json.dumps(augmentedEventObject))
+    else:
+      print ("Transmitting event")
+
     httpresp = requests.post(EVENT_RECEIVER_URL, json=augmentedEventObject)
   except Exception as e: 
     print ("EXCEPTION while posting data to log collector. e=" + str(e))
@@ -201,14 +205,15 @@ def revolutionEvent(idx,amtChange):
     
 
     # Record detailed per-revolution amtChange readings.
-    stats[idx].appendArray("dbgRevolutionRPM",     rpm)
     if rpm > MAX_VALID_RPM:
         # Record the invalid RPM event with a special annotation.
         stats[idx].appendArray("dbgRevolutionAmtChange","!" + str(round(amtChange,2)) + "!")
         stats[idx].incrementStat("crazyHighRPMEvents")
+        stats[idx].appendArray("dbgRevolutionRPM",     "!" + str(rpm) + "!")
         return
     else:
         stats[idx].appendArray("dbgRevolutionAmtChange",str(round(amtChange,2)))
+        stats[idx].appendArray("dbgRevolutionRPM",     str(rpm))
 
 
     # Don't count this as a revolution unless above sanity checks and debouncing logic pass. 
@@ -237,7 +242,8 @@ def revolutionEvent(idx,amtChange):
     if timeSinceLastRevolution > WHEEL_STILLNESS_THRESHOLD:
         return
 
-    print ("[" + str(idx) + "] " + json.dumps(stats[idx].getStats()))
+    if DEBUG_ANALOG==True:
+      print ("[" + str(idx) + "] " + json.dumps(stats[idx].getStats()))
 
     # Track max mph this run. 
     if "mph_max" in stats[idx].getStats():
@@ -393,11 +399,11 @@ while True:
             # print ("[A" + str(i) + "]: " + str(round(amtChange,2)) + " from " + str(round(values[i],2)) + " to " + str(round(valuesAvg[i],2)))
             revolutionEvent(i,amtChange)
             stats[i].averageStat("sampleRate",loopsPerSecond)
-            stats[i].appendArray("dbgAmtChangedFrom",valuesAvg[i])
-            stats[i].recordMinMax("amtChange",amtChange)
+            stats[i].appendArray("dbgAmtChangedFrom",round(valuesAvg[i],2))
+            stats[i].recordMinMax("amtChange",round(amtChange,1))
             # in the past we had a time.sleep() here, but then we evolved to a time check method. Ultimately we should use a separate threads for checking ADC and processing readings.
         else:
-            stats[i].recordMinMax("amtChangeIdle",amtChange)
+            stats[i].recordMinMax("amtChangeIdle",round(amtChange,1))
         
         
         if amtChange > MIN_CHANGE:

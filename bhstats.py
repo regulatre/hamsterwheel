@@ -74,6 +74,6 @@ class BhStats():
       # end of recordMinMax. 
       
     def resetMinMax(self,statBaseName):
-      del self.STATS[statBaseName + "_min"]
-      del self.STATS[statBaseName + "_max"]
+      if (statBaseName + "_min") in self.STATS: del self.STATS[statBaseName + "_min"]
+      if (statBaseName + "_max") in self.STATS: del self.STATS[statBaseName + "_max"]
       
