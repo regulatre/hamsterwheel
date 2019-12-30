@@ -35,3 +35,45 @@ class BhStats():
         # First value being added, add as-is.
         self.STATS[statName] = newValue
 
+    # Append the given <any datatype> to an ever growing array under the statName key
+    def appendArray(self,statName,newArrayElement):
+      if statName in self.STATS:
+        # Append to existing array.
+        self.STATS[statName].append(newArrayElement)
+      else:
+        # new array
+        self.STATS[statName] = [ newArrayElement ]
+        
+    # A convenience function for resetting an array back to nothing.
+    def resetArray(self,statName):
+      self.STATS[statName] = []
+      
+    def recordMin(self,statBaseName,newMinValue):
+      self.STATS[statBaseName + "_min"] = newMinValue
+      pass
+    
+    def recordMax(self,statBaseName,newMaxValue):
+      self.STATS[statBaseName + "_max"] = newMaxValue
+      pass
+    
+    # Given a stat base name, and current reading, we'll track <basename>_min and <basename>_max for you.
+    def recordMinMax(self,statBaseName,newValue):
+      if (statBaseName + "_min") not in self.STATS:
+        self.recordMin(statBaseName,newValue)
+        return
+      if (statBaseName + "_max") not in self.STATS:
+        self.recordMax(statBaseName,newValue)
+        return
+      
+      if newValue > self.STATS[statBaseName + "_max"]:
+        self.recordMax(statBaseName,newValue)
+        
+      if newValue < self.STATS[statBaseName + "_min"]:
+        self.recordMin(statBaseName,newValue)
+        
+      # end of recordMinMax. 
+      
+    def resetMinMax(self,statBaseName):
+      del self.STATS[statBaseName + "_min"]
+      del self.STATS[statBaseName + "_max"]
+      

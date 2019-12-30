@@ -101,6 +101,14 @@ def resetWheelStats(idx):
 
   stats[idx].setStat("crazyHighRPMEvents",0)
   
+  stats[idx].resetArray("dbgRevolutionRPM")
+  stats[idx].resetArray("dbgRevolutionAmtChange")
+  stats[idx].resetArray("dbgAmtChangedFrom")
+  
+  stats[idx].resetMinMax("amtChange")
+  stats[idx].resetMinMax("amtChangeIdle")
+  
+
   
 # Queue readings from all analog wheel speed input sensors, then reset them. Run this function during times when the wheel has stopped for best results.
 # ALSO: send those queued readings to the log collector.
@@ -181,7 +189,7 @@ def revolutionEvent(idx,amtChange):
     global MAX_VALID_RPM
     global WHEEL_STILLNESS_THRESHOLD
 
-    timeSinceLastRevolution=getEpochMillis()-LAST_REVOLUTION_TIME[idx];
+    timeSinceLastRevolution=getEpochMillis()-LAST_REVOLUTION_TIME[idx]
     LAST_REVOLUTION_TIME[idx] = getEpochMillis()
     
     rpm = getRPMFromOneRoundTime(timeSinceLastRevolution)
@@ -189,10 +197,19 @@ def revolutionEvent(idx,amtChange):
 
     # Make sure each stats array contains an element that reflects the analog index to which it corresponds.
     stats[idx].setStat("analogIndex",idx)
+    
+    
 
+    # Record detailed per-revolution amtChange readings.
+    stats[idx].appendArray("dbgRevolutionRPM",     rpm)
     if rpm > MAX_VALID_RPM:
+        # Record the invalid RPM event with a special annotation.
+        stats[idx].appendArray("dbgRevolutionAmtChange","!" + str(round(amtChange,2)) + "!")
         stats[idx].incrementStat("crazyHighRPMEvents")
         return
+    else:
+        stats[idx].appendArray("dbgRevolutionAmtChange",str(round(amtChange,2)))
+
 
     # Don't count this as a revolution unless above sanity checks and debouncing logic pass. 
     stats[idx].incrementStat("totalRevolutions")
@@ -340,6 +357,7 @@ stats[1].setStat("startupTime",getEpochMillis())
 stats[2].setStat("startupTime",getEpochMillis())
 stats[3].setStat("startupTime",getEpochMillis())
 print ("READY SET GO!!!")
+loopsPerSecond=0
 while True:
     loops = loops + 1
     runtimeElapsedSeconds = int((getEpochMillis() - startTime)/1000)
@@ -374,7 +392,13 @@ while True:
         if amtChange > MIN_CHANGE and direction[i] != 1:
             # print ("[A" + str(i) + "]: " + str(round(amtChange,2)) + " from " + str(round(values[i],2)) + " to " + str(round(valuesAvg[i],2)))
             revolutionEvent(i,amtChange)
-            # NOTE: We were sleeping for 0.2 here when it was just one input. With multiple inputs we need to do an elapsed time check instead of a sleep. That way inputs don't interfere with eachother.
+            stats[i].averageStat("sampleRate",loopsPerSecond)
+            stats[i].appendArray("dbgAmtChangedFrom",valuesAvg[i])
+            stats[i].recordMinMax("amtChange",amtChange)
+            # in the past we had a time.sleep() here, but then we evolved to a time check method. Ultimately we should use a separate threads for checking ADC and processing readings.
+        else:
+            stats[i].recordMinMax("amtChangeIdle",amtChange)
+        
         
         if amtChange > MIN_CHANGE:
             direction[i]=1
