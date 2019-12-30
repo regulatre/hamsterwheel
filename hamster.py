@@ -101,9 +101,9 @@ def resetWheelStats(idx):
 
   stats[idx].setStat("crazyHighRPMEvents",0)
   
-  stats[idx].resetArray("dbgRevolutionRPM")
-  stats[idx].resetArray("dbgRevolutionAmtChange")
-  stats[idx].resetArray("dbgAmtChangedFrom")
+  if DEBUG_EACH_REVOLUTION == True: stats[idx].resetArray("dbgRevolutionRPM")
+  if DEBUG_EACH_REVOLUTION == True: stats[idx].resetArray("dbgRevolutionAmtChange")
+  if DEBUG_EACH_REVOLUTION == True: stats[idx].resetArray("dbgAmtChangedFrom")
   
   stats[idx].resetMinMax("amtChange")
   stats[idx].resetMinMax("amtChangeIdle")
@@ -207,13 +207,18 @@ def revolutionEvent(idx,amtChange):
     # Record detailed per-revolution amtChange readings.
     if rpm > MAX_VALID_RPM:
         # Record the invalid RPM event with a special annotation.
-        stats[idx].appendArray("dbgRevolutionAmtChange","!" + str(round(amtChange,2)) + "!")
+        if DEBUG_EACH_REVOLUTION == True: stats[idx].appendArray("dbgRevolutionAmtChange","!" + str(round(amtChange,2)) + "!")
         stats[idx].incrementStat("crazyHighRPMEvents")
-        stats[idx].appendArray("dbgRevolutionRPM",     "!" + str(rpm) + "!")
+        if DEBUG_EACH_REVOLUTION == True: stats[idx].appendArray("dbgRevolutionRPM",     "!" + str(rpm) + "!")
+        stats[i].recordMinMax("crazyAmtChange",round(amtChange,1))
         return
-    else:
-        stats[idx].appendArray("dbgRevolutionAmtChange",str(round(amtChange,2)))
-        stats[idx].appendArray("dbgRevolutionRPM",     str(rpm))
+
+
+    if DEBUG_EACH_REVOLUTION == True: stats[idx].appendArray("dbgRevolutionAmtChange",str(round(amtChange,2)))
+    if DEBUG_EACH_REVOLUTION == True: stats[idx].appendArray("dbgRevolutionRPM",      str(rpm))
+
+    # Only record min/max for amtChange when it's within appropriate bounds.
+    stats[i].recordMinMax("amtChange",round(amtChange,1))
 
 
     # Don't count this as a revolution unless above sanity checks and debouncing logic pass. 
@@ -292,6 +297,7 @@ def doStartupSanityChecks():
   global WHEEL_INDEXES_PRESENT
   global WHEEL_CIRCUMFRENCE
   global MIN_CHANGE
+  global DEBUG_EACH_REVOLUTION
 
   if "DEBUG_ANALOG" in os.environ and os.environ["DEBUG_ANALOG"].lower() == "true": 
     DEBUG_ANALOG=True
@@ -321,6 +327,14 @@ def doStartupSanityChecks():
   if "MIN_CHANGE" in os.environ:
     MIN_CHANGE = float(os.environ["MIN_CHANGE"])
     print ("Overriding MIN_CHANGE with value from environment. New value: " + str(MIN_CHANGE))
+
+  # if present and "True/true/TRUE" then set it true. Otherwise False. 
+  if "DEBUG_EACH_REVOLUTION" in os.environ:    
+    if os.environ["DEBUG_EACH_REVOLUTION"].lower() == "true":
+      DEBUG_EACH_REVOLUTION = True
+  else:
+    DEBUG_EACH_REVOLUTION = False
+  print ("DEBUG_EACH_REVOLUTION (Adds tons of details to each message payload)= " + str(DEBUG_EACH_REVOLUTION))
 
   if "WHEEL_CIRCUMFRENCE" not in os.environ:
     die ("ERROR: Please set env variable WHEEL_CIRCUMFRENCE to four floating point values eg. 0,0,19.5,21.0")
@@ -399,8 +413,7 @@ while True:
             # print ("[A" + str(i) + "]: " + str(round(amtChange,2)) + " from " + str(round(values[i],2)) + " to " + str(round(valuesAvg[i],2)))
             revolutionEvent(i,amtChange)
             stats[i].averageStat("sampleRate",loopsPerSecond)
-            stats[i].appendArray("dbgAmtChangedFrom",round(valuesAvg[i],2))
-            stats[i].recordMinMax("amtChange",round(amtChange,1))
+            if DEBUG_EACH_REVOLUTION == True: stats[i].appendArray("dbgAmtChangedFrom",round(valuesAvg[i],2))
             # in the past we had a time.sleep() here, but then we evolved to a time check method. Ultimately we should use a separate threads for checking ADC and processing readings.
         else:
             stats[i].recordMinMax("amtChangeIdle",round(amtChange,1))
