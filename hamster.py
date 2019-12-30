@@ -331,6 +331,8 @@ def doStartupSanityChecks():
     print ("Overriding MIN_CHANGE with value from environment. New value: " + str(MIN_CHANGE))
 
   # if present and "True/true/TRUE" then set it true. Otherwise False. 
+  # Anchor case
+  DEBUG_EACH_REVOLUTION=False
   if "DEBUG_EACH_REVOLUTION" in os.environ:    
     if os.environ["DEBUG_EACH_REVOLUTION"].lower() == "true":
       DEBUG_EACH_REVOLUTION = True
