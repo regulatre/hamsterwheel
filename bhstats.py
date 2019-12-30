@@ -48,28 +48,21 @@ class BhStats():
     def resetArray(self,statName):
       self.STATS[statName] = []
       
-    def recordMin(self,statBaseName,newMinValue):
-      self.STATS[statBaseName + "_min"] = newMinValue
-      pass
-    
-    def recordMax(self,statBaseName,newMaxValue):
-      self.STATS[statBaseName + "_max"] = newMaxValue
-      pass
-    
+          
     # Given a stat base name, and current reading, we'll track <basename>_min and <basename>_max for you.
     def recordMinMax(self,statBaseName,newValue):
       if (statBaseName + "_min") not in self.STATS:
-        self.recordMin(statBaseName,newValue)
+        self.STATS[statBaseName + "_min"] = newValue
         return
       if (statBaseName + "_max") not in self.STATS:
-        self.recordMax(statBaseName,newValue)
+        self.STATS[statBaseName + "_max"] = newValue
         return
       
       if newValue > self.STATS[statBaseName + "_max"]:
-        self.recordMax(statBaseName,newValue)
+        self.STATS[statBaseName + "_max"] = newValue
         
       if newValue < self.STATS[statBaseName + "_min"]:
-        self.recordMin(statBaseName,newValue)
+        self.STATS[statBaseName + "_min"] = newValue
         
       # end of recordMinMax. 
       
