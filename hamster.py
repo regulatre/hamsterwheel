@@ -243,7 +243,7 @@ def revolutionEvent(idx,amtChange):
         stats[idx].incrementStat("crazyHighRPMEvents")
         if DEBUG_EACH_REVOLUTION == True: stats[idx].appendArray("dbgRevolutionRPM",     "!" + str(rpm) + "!")
         stats[i].recordMinMax("crazyAmtChange",round(amtChange,1))
-        print ("INVALID RPM on index " + str(idx) + " revolution#" + str(stats[idx].getStat("totalRevolutions")) + " runtimeMillis=" + str(runTimeMillis) + " rpm=" + str(rpm) + " timeSinceLastRevolution=" + str(timeSinceLastRevolution))
+        print ("INVALID RPM on index " + str(idx) + " revolution=" + str(stats[idx].getStat("totalRevolutions")) + " runtimeMillis=" + str(runTimeMillis) + " rpm=" + str(rpm) + " timeSinceLastRevolution=" + str(timeSinceLastRevolution) + " amtChange=" + str(amtChange))
         return
 
 
