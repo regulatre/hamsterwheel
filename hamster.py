@@ -220,7 +220,7 @@ def revolutionEvent(idx,amtChange):
     runTimeMillis = getEpochMillis() - stats[idx].getStat("runStartTime")
     runTimeSeconds = (0.0 + runTimeMillis) / 1000
     runTimeSeconds = round(runTimeSeconds,2)
-    stats[idx].setStat("runTimeMillis",runTimeMillis)
+    # stats[idx].setStat("runTimeMillis",runTimeMillis)
     stats[idx].setStat("runTimeSeconds",runTimeSeconds)
 
     ###
@@ -427,7 +427,8 @@ while True:
         # The goal here being to generate two arrays, that can be loaded into excel or similar and plotted.
         if DUMP_ADC_SAMPLES == True and stats[i].getStat("totalRevolutions") > 0:
           stats[i].appendArray("adc_raw_samples",values[i])
-          stats[i].appendArray("adc_offset_millis",stats[i].getStat("runTimeMillis"))
+          runTimeMillis = getEpochMillis() - stats[i].getStat("runStartTime")
+          stats[i].appendArray("adc_offset_millis",runTimeMillis)
 
 
         if amtChange > MIN_CHANGE and direction[i] != 1:
