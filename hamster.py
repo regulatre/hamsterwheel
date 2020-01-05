@@ -65,6 +65,9 @@ def logStdErr (yourMessage):
     # Python3: print yourMessage, file=sys.stderr
 
 def getRPMFromOneRoundTime(oneRoundTimeMillis):
+  # Prevent divide by zero
+  if oneRoundTimeMillis == 0: 
+    oneRoundTimeMillis = 1
   rpm = (1000 * 60) / oneRoundTimeMillis
   rpm = round(rpm,3)
   return rpm
@@ -134,6 +137,7 @@ def queueStatsReading(idx):
   statsCopy = objCopyExcept(stats[idx].getStats(),["lastRevolutionTime","lastResetTime","startupTime","runStartTime"])
   statsCopy["timestamp"] = getEpochMillis()
   statsCopy["appUptimeSeconds"] = getAppUptimeSeconds()
+  statsCopy["gain"] = GAIN
   messageQueue.put(statsCopy)
 
   # Dequeue up to N items at a time as needed. TODO: Do this asychronously, in an independent thread, that won't disrupt the main loop. 
@@ -186,23 +190,51 @@ def dequeueOneReading():
 
 
 # Initialize an array that we'll use to store last revolution times for each analog input.
-LAST_REVOLUTION_TIME = [getEpochMillis(), getEpochMillis(), getEpochMillis(), getEpochMillis()]
+# LAST_REVOLUTION_TIME = [getEpochMillis(), getEpochMillis(), getEpochMillis(), getEpochMillis()]
 # This function gets fired every time a "revolution" is detected - one complete turn around, or one pass of the hall-effect sensor.
 def revolutionEvent(idx,amtChange):
     global WHEEL_CIRCUMFRENCE
     global MAX_VALID_RPM
     global WHEEL_STILLNESS_THRESHOLD
 
-    timeSinceLastRevolution=getEpochMillis()-LAST_REVOLUTION_TIME[idx]
-    LAST_REVOLUTION_TIME[idx] = getEpochMillis()
-    
-    rpm = getRPMFromOneRoundTime(timeSinceLastRevolution)
-    mph = getMPHFromRPM(rpm,WHEEL_CIRCUMFRENCE[idx])
-
     # Make sure each stats array contains an element that reflects the analog index to which it corresponds.
     stats[idx].setStat("analogIndex",idx)
-    
-    
+
+    # Make sure we track the start of the run, so we can also track run time elapsed.
+    if "runStartTime" not in stats[idx].getStats():
+      stats[idx].setStat("runStartTime",0)
+      stats[idx].setStat("totalRevolutions",0)
+
+    # runStartTime can be unset, zero, an old value, or a valid last revolution time.
+    if stats[idx].getStat("runStartTime") == 0:
+      print("[" + str(idx) + "] New run starting... amtChange=" + str(amtChange))
+      stats[idx].setStat("runStartTime",getEpochMillis())
+      stats[idx].setStat("runStartAmtChange",amtChange)
+      stats[idx].setStat("totalRevolutions",0)
+      stats[idx].setStat("lastRevolutionTime",getEpochMillis())
+      stats[idx].setStat("runTimeSeconds",0)      
+      # Initial revolution. That means we can't calculate speed or anything because the wheel hasn't gone around one full revolution yet.
+      return
+
+    # As long as the wheel is in motion in any form, valid or not, we update the runtime seconds counter. 
+    runTimeMillis = getEpochMillis() - stats[idx].getStat("runStartTime")
+    runTimeSeconds = (0.0 + runTimeMillis) / 1000
+    runTimeSeconds = round(runTimeSeconds,2)
+    stats[idx].setStat("runTimeMillis",runTimeMillis)
+    stats[idx].setStat("runTimeSeconds",runTimeSeconds)
+
+    ###
+    ### Processing beyond this point is for a revolution AFTER the initial revolution. 
+    ###
+
+    ###
+    ### Sanity checks - First determins if this is a real event, or a false-positive. We do this based on the RPM being within an acceptable range.
+    ### 
+
+    # timeSinceLastRevolution=getEpochMillis()-LAST_REVOLUTION_TIME[idx] ***** THIS IS BAD BECAUSE IT CAN BE SKEWED BY INVALID REVOLUTION EVENTS. 
+    timeSinceLastRevolution=getEpochMillis()-stats[idx].getStat("lastRevolutionTime")
+    rpm = getRPMFromOneRoundTime(timeSinceLastRevolution)
+    mph = getMPHFromRPM(rpm,WHEEL_CIRCUMFRENCE[idx])
 
     # Record detailed per-revolution amtChange readings.
     if rpm > MAX_VALID_RPM:
@@ -214,57 +246,31 @@ def revolutionEvent(idx,amtChange):
         return
 
 
-    if DEBUG_EACH_REVOLUTION == True: stats[idx].appendArray("dbgRevolutionAmtChange",str(round(amtChange,2)))
-    if DEBUG_EACH_REVOLUTION == True: stats[idx].appendArray("dbgRevolutionRPM",      str(rpm))
+    ###
+    ### It's a valid revolution. Perform normal calcualtions now.
+    ###
 
-    # Only record min/max for amtChange when it's within appropriate bounds.
-    stats[i].recordMinMax("amtChange",round(amtChange,1))
-
-
-    # Don't count this as a revolution unless above sanity checks and debouncing logic pass. 
     stats[idx].incrementStat("totalRevolutions")
     stats[idx].setStat("totalInches",stats[idx].getStat("totalRevolutions") * WHEEL_CIRCUMFRENCE[idx])
     # The last revolution time metric is used by the loop to clear rpm&MPH if no movement has been detected in N seconds.
     stats[idx].setStat("lastRevolutionTime",getEpochMillis())
+    stats[idx].setStat("lastRevolutionMillis",timeSinceLastRevolution)
+    stats[idx].averageStat ("rpm",rpm)
+    stats[idx].recordMinMax("rpm",rpm)
+    stats[idx].averageStat ("mph",mph)
+    stats[idx].recordMinMax("mph",mph)
+    stats[idx].averageStat ("AvgAmtChange",amtChange)
+    stats[i].recordMinMax  ("amtChange",round(amtChange,1))
 
-    # Make sure we track the start of the run, so we can also track run time elapsed.
-    if "runStartTime" not in stats[idx].getStats():
-      stats[idx].setStat("runStartTime",getEpochMillis())
 
-    # not the first run, but run data has been cleared and we're starting a new run.
-    if stats[idx].getStat("runStartTime") == 0:
-      print("[" + str(idx) + "] New run starting... amtChange=" + str(amtChange))
-      stats[idx].setStat("runStartTime",getEpochMillis())
-      stats[idx].setStat("runStartAmtChange",amtChange)
-
-    # Keep updating the run time seconds metric, each revolution, as it may be the last of the run.
-    runTimeMillis = getEpochMillis() - stats[idx].getStat("runStartTime")
-    runTimeSeconds = (0.0 + runTimeMillis) / 1000
-    runTimeSeconds = round(runTimeSeconds,2)
-    stats[idx].setStat("runTimeSeconds",runTimeSeconds)
-
-    # Don't calculate speed if wheel has been idle. But it still counts as a revolution (which we took care of above). 
-    if timeSinceLastRevolution > WHEEL_STILLNESS_THRESHOLD:
-        return
+    if DEBUG_EACH_REVOLUTION == True: stats[idx].appendArray("dbgRevolutionAmtChange",str(round(amtChange,2)))
+    if DEBUG_EACH_REVOLUTION == True: stats[idx].appendArray("dbgRevolutionRPM",      str(rpm))
 
     if DEBUG_ANALOG==True:
       print ("[" + str(idx) + "] " + json.dumps(stats[idx].getStats()))
 
-    # # Track max mph this run. 
-    # if "mph_max" in stats[idx].getStats():
-    #   if mph > stats[idx].getStat("mph_max"):
-    #     stats[idx].setStat("mph_max",mph)
-    # else:
-    #   # no record of a max yet, current mph becomes max.
-    #   stats[idx].setStat("mph_max",mph)
-   
-    # All sanity checks passed. This is a legitimate revolution.
-    stats[idx].setStat("lastRevolutionMillis",timeSinceLastRevolution)
-    stats[idx].averageStat("rpm",rpm)
-    stats[idx].recordMinMax("rpm",rpm)
-    stats[idx].averageStat("mph",mph)
-    stats[idx].recordMinMax("mph",mph)
-    stats[idx].averageStat("AvgAmtChange",amtChange)
+    # End of revolution event function.
+
 
 # If the wheel is still, then we'll set RPM & MPH to zeros. 
 def wheelIsStill(idx):
@@ -273,7 +279,6 @@ def wheelIsStill(idx):
   # Wheel may be still, but has it even moved at all? If so then it's worth recording. Otherwise not so much. In any case we reset the stats for the wheel before returning.
   if "runTimeSeconds" in stats[idx].getStats():
     if stats[idx].getStat("runTimeSeconds") > 0:
-      # stats[idx].incrementStat("stops")
       queueStatsReading(idx)
 
   resetWheelStats(idx)
@@ -300,12 +305,17 @@ def doStartupSanityChecks():
   global WHEEL_CIRCUMFRENCE
   global MIN_CHANGE
   global DEBUG_EACH_REVOLUTION
+  global DUMP_ADC_SAMPLES
 
   if "DEBUG_ANALOG" in os.environ and os.environ["DEBUG_ANALOG"].lower() == "true": 
     DEBUG_ANALOG=True
   else: 
     DEBUG_ANALOG=False
 
+  if "DUMP_ADC_SAMPLES" in os.environ and os.environ["DUMP_ADC_SAMPLES"].lower() == "true":
+    DUMP_ADC_SAMPLES = True
+  else:
+    DUMP_ADC_SAMPLES = False
 
   if "WHEEL_STILLNESS_THRESHOLD" in os.environ:
     WHEEL_STILLNESS_THRESHOLD = float(os.environ["WHEEL_STILLNESS_THRESHOLD"])
@@ -412,6 +422,13 @@ while True:
         amtChange = values[i] - valuesAvg[i]
         if DEBUG_ANALOG==True:
           print ("avg[" + str(i) + "]=" + str(round(valuesAvg[i],2)) + " current=" + str(round(values[i],2)) + " chg=" + str(round(amtChange,2)))
+
+        # Put on your seatbelt, we're logging every sample during the run.
+        # The goal here being to generate two arrays, that can be loaded into excel or similar and plotted.
+        if DUMP_ADC_SAMPLES == True and stats[i].getStat("totalRevolutions") > 0:
+          stats[i].appendArray("adc_raw_samples",values[i])
+          stats[i].appendArray("adc_offset_millis",stats[i].getStat("runTimeMillis"))
+
 
         if amtChange > MIN_CHANGE and direction[i] != 1:
             # print ("[A" + str(i) + "]: " + str(round(amtChange,2)) + " from " + str(round(values[i],2)) + " to " + str(round(valuesAvg[i],2)))
