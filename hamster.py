@@ -95,7 +95,8 @@ def resetWheelStats(idx):
   # Even though the following two metrics are already reset by this time, through other means (stillness threshold was met), we'll reset them anyways. 
   stats[idx].setStat("rpm",0)
   stats[idx].setStat("mph",0)
-  stats[idx].setStat("mph_max",0)
+  stats[idx].resetMinMax("rpm")
+  stats[idx].resetMinMax("mph")
  
   stats[idx].setStat("lastResetTime",getEpochMillis())
 
@@ -112,7 +113,6 @@ def resetWheelStats(idx):
   stats[idx].resetMinMax("amtChangeIdle")
   
 
-  
 # Queue readings from all analog wheel speed input sensors, then reset them. Run this function during times when the wheel has stopped for best results.
 # ALSO: send those queued readings to the log collector.
 def queueStatsReading(idx):
