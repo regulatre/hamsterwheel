@@ -13,12 +13,17 @@ RestartSec=10
 
 # Tuning parameters, specific to each ADC environment.
 Environment=WHEEL_CIRCUMFRENCE=0,0,21.5,21.5
+# Logstash or whatever you use.
 Environment=EVENT_RECEIVER_URL=http://192.168.1.100/hamsterwheel
 Environment=MAX_VALID_RPM=300
-# crazyHighRPMEvents may show 5-10 errors but its because its sensitive and the apparatus is doing its job. better to be sensitive and get all the turns, than less sensitive and miss turns. 
 Environment=GAIN=4
-Environment=MIN_CHANGE=2
+Environment=MIN_CHANGE=15
+# DEBUG_ANALOG prints a ton of data to stdout, not suitable for a headless service.
 Environment=DEBUG_ANALOG=false
+# DEBUG_EACH_REVOLUTION collects, and transmits to the log collector, a wide range of metrics EVERY REVOLUTION. So you end up with large arrays of data points, suitable only for debugging.
+Environment=DEBUG_EACH_REVOLUTION=false
+# NOT FOR PROD!!! THIS DUMPS A CRUSHINGLY HUGE NUMBER OF DATA POINTS 
+Environment=DUMP_ADC_SAMPLES=false
 
 
 

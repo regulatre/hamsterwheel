@@ -49,7 +49,9 @@ When a magnet passes by the coil an electrical impulse is generated, which is wh
 
 ## Observations
 
-The hamsters start their exercise about 10 minutes after the lights go out. They both typically exercise for about four hours before calling it a night. The two hamster habatats are situated side by side. When one hamster starts running the other tends to start too, although at times, the data seems to suggest that Fluff doesn't start significant exercise until after Cutie's wheel cools down for a while. Cutie's wheel does make a lot of racket and may be intimidating to Fluff. Future experiment: oil the wheel and see if this increases Fluff's activity. 
+The hamsters start their exercise about 10 minutes after the lights go out. They both typically exercise for four to eight hours before calling it a night. Two of the habitats are situated side by side. Before we upgraded the hamsters to low-noise, low-friction wheels, they were noisy, and the noise frightened the hamster that wasn't running. Now that each hamster has a silent wheel, they all run whenever they want, often at the same time. within about 15 minutes of the lights going out, the hamsters come out of their nest and start their exercise routine. 
+
+We feed them fresh fruit and vegetable treats each night... if we leave the fruit next to the cage overnight the hamsters seem to run further and faster. Further experimentation is needed to confirm. 
 
 ## Data Schema
 
@@ -60,25 +62,43 @@ Individual messages look something like this:
 ``` json
 
 {
-  "appUptimeSeconds": 190790,
-  "statsPeriod": 10010,
-  "lastRevolutionMillis": 516,
-  "@timestamp": "2019-12-08T01:23:01.669Z",
-  "crazyHighRPMEvents": 0,
-  "mph_max": 2.142,
-  "hamsterName": "cutie",
-  "runTimeSeconds": 6.96,
-  "AvgAmtChange": 12.536,
-  "totalRevolutions": 7,
-  "mph": 1.454,
-  "rpm": 78.719,
-  "analogIndex": 2,
-  "host": "x.x.x.x",
-  "queuedms": 0,
-  "totalInches": 136.5
-}
+  "_index": "hamster-2020.01",
+  "_type": "_doc",
+  "_id": "cFtSiG8BvqHd8kNhNYvy",
+  "_version": 1,
+  "_score": 1,
+  "_source": {
+    "crazyAmtChange_min": 15,
+    "sampleRate": 49.485,
+    "gain": 4,
+    "AvgAmtChange": 29.645,
+    "rpm_min": 60.729,
+    "queuedms": 0,
+    "mph_min": 1.236,
+    "runStartAmtChange": 27.48056774908588,
+    "crazyAmtChange_max": 27,
+    "rpm": 77.458,
+    "amtChangeIdle_max": 28.5,
+    "crazyHighRPMEvents": 0,
+    "hamsterName": "fluff",
+    "statsPeriod": 19982,
+    "analogIndex": 3,
+    "lastRevolutionMillis": 988,
+    "runTimeSeconds": 17.07,
+    "totalInches": 752.5,
+    "amtChangeIdle_min": -98.8,
+    "host": "xxx",
+    "amtChange_min": 15.8,
+    "appUptimeSeconds": 1594,
+    "@timestamp": "2020-01-09T03:21:26.723Z",
+    "totalRevolutions": 35,
+    "mph": 1.577,
+    "mph_max": 3.031,
+    "amtChange_max": 80.7,
+    "rpm_max": 148.883
+  }
 
-Some fields in the message seen above such as hamsterName are added by my logstash data enrichment pipeline. 
+/* Some fields in the message seen above, such as hamsterName, are added by my logstash data enrichment pipeline.  */
 
 
 ```
